@@ -153,6 +153,7 @@ S /Users/andrewblinn/.opam/ocaml-smyth/lib/variantslib
 S /Users/andrewblinn/.opam/ocaml-smyth/lib/virtual_dom
 S /Users/andrewblinn/.opam/ocaml-smyth/lib/virtual_dom/css_gen
 S /Users/andrewblinn/.opam/ocaml-smyth/lib/virtual_dom/ui_event
+S ../core
 S ../util
 S .
 S util

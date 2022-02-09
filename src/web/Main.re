@@ -4,7 +4,7 @@ open Web;
 
 module App = {
   module Model = Model;
-  module Action = FurlUpdate;
+  module Action = Update;
   module State = State;
 
   let observe_font_specimen = (id, update) =>
@@ -48,12 +48,12 @@ module App = {
     let%map model = model;
     Component.create(
       //~apply_action=Web.Update.apply(model),
-      ~apply_action=Web.FurlUpdate.apply(model),
+      ~apply_action=Web.Update.apply(model),
       // ~on_display=
       //   (_, ~schedule_action as _) => {print_endline("on_display")},
       model,
       //Web.Page.view(~inject, model),
-      Web.FurlView.view(~inject, model.furl_model),
+      Web.View.view(~inject, model),
     );
   };
 };
