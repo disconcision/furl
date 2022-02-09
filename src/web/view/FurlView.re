@@ -273,7 +273,7 @@ let title_view = ({dragged_path, _}: FurlModel.t, ~inject) =>
       Attr.on("dragover", _evt => {Event.Prevent_default}),
       Attr.on("dragenter", _evt => {Event.Prevent_default}),
     ],
-    [text("furl")],
+    [text("furl 🗑️")],
   );
 
 let view = (~inject, {world, focus, _} as model: FurlModel.t) => {
