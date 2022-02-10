@@ -222,3 +222,49 @@ let take_5 =
   fun
   | [x1, x2, x3, x4, x5, ..._] => (x1, x2, x3, x4, x5)
   | _ => raise(Invalid_argument("ListUtil.take_5"));
+
+// new:
+
+let rec intersperse: ('a, list('a)) => list('a) =
+  (sep, ls) =>
+    switch (ls) {
+    | []
+    | [_] => ls
+    | [hd, ...tl] => [hd] @ [sep] @ intersperse(sep, tl)
+    };
+
+let rec interleave: (list('a), list('a)) => list('a) =
+  (xs, ys) =>
+    switch (xs) {
+    | [] => ys
+    | [x, ...xs] => [x, ...interleave(ys, xs)]
+    };
+
+let swap: (int, int, list('a)) => list('a) =
+  (u, v, xs) => {
+    let e_u = List.nth(xs, u);
+    let e_v = List.nth(xs, v);
+    List.mapi((i, x) => i == u ? e_v : i == v ? e_u : x, xs);
+  };
+
+let insert_at: (int, 'a, list('a)) => list('a) =
+  (i, n, xs) =>
+    if (i == List.length(xs)) {
+      xs @ [n];
+    } else {
+      List.fold_left2(
+        (acc, x, idx) => {acc @ (i == idx ? [n, x] : [x])},
+        [],
+        xs,
+        List.init(List.length(xs), x => x),
+      );
+    };
+
+let remove: (int, list('a)) => list('a) =
+  (i, xs) =>
+    List.fold_left2(
+      (acc, x, idx) => {acc @ (i == idx ? [] : [x])},
+      [],
+      xs,
+      List.init(List.length(xs), x => x),
+    );

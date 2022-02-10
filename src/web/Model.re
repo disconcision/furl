@@ -1,18 +1,11 @@
 open Core;
 open Sexplib.Std;
-
-/*
- type t = {furl_model: FurlModel.t};
-
- let init = {furl_model: FurlModel.init};
- */
-
 let cutoff = (===);
 
 [@deriving sexp]
 type focus =
   //TODO: revisit
-  | SingleCell(World.path);
+  | SingleCell(Block.path);
 
 [@deriving sexp]
 type cell_proj =
@@ -23,15 +16,15 @@ type cell_proj =
 
 [@deriving sexp]
 type t = {
-  world: World.block,
+  world: Block.t,
   cell_proj,
   focus,
   carried_cell: int,
   carried_word: string,
-  dragged_path: World.path,
+  dragged_path: Block.path,
 };
 
-let init_world: World.block = [
+let init_world: Block.t = [
   {pattern: ["blarg"], expression: ["blorgh", "blug"], value: ["blee"]},
   {
     pattern: ["fzerpoib"],
@@ -46,9 +39,9 @@ let init_world: World.block = [
 ];
 
 let init = {
-  world: World.init_world,
+  world: Block.init_world,
   cell_proj: ExpressionPattern,
-  focus: SingleCell(World.init_path),
+  focus: SingleCell(Block.init_path),
   carried_cell: 0,
   carried_word: "",
   dragged_path: [],
