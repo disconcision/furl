@@ -110,3 +110,11 @@ let run_block: Block.t => Block.t =
       block,
     )
     |> fst;
+
+/*
+
+ Idea: offset all word positions by tiny amounts in both x and y or just y?
+ to make it look more fun. make this pseudorandom based on word as seed
+ so it doesn't constantly change? but make it jiggle when selected (will naturally jiggle when typing)
+
+  */

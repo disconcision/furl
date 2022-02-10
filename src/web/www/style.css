@@ -1009,13 +1009,13 @@ body {
 }
 
 .cell-view.focussed {
-  background-color: #d1ccf8;
+  background-color: #d1ccf8 !important;
 }
 
 .cell-view:hover {
-  outline: dotted 1px #d1ccf8;
+  background-color: #e5d3fc;
+  /*outline: dotted 1px #d1ccf8;*/
 }
-
 
 .expression-view, .pattern-view, .value-view {
   display: flex;
@@ -1052,12 +1052,22 @@ body {
 }
 */
 
-.atom.on-path, .atom.focussed, .atom:hover {
-  background-color: #d7cefc;
-  border-radius: var(--base-radius);
+.atom.on-path, .atom.focussed {
+  outline: solid 2px #9799f6;
+  background-color: #9799f6;
+  color: #e8e2ff !important;
+  border-radius: 0.02em;
+}
+
+ .atom:hover {
+  color: #9799f6;
 }
 
 .word-separator{
   color: #0000;
   border-radius: var(--base-radius);
+}
+
+.word-separator:hover{
+  color: #9799f6;
 }

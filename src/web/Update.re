@@ -39,20 +39,34 @@ let update_dragged_path = (f, {dragged_path, _} as model: Model.t) => {
   dragged_path: f(dragged_path),
 };
 
+let num_words_expression = (block, cell_idx) =>
+  Core.Block.nth_cell(block, cell_idx)
+  |> ((x: Core.Block.cell) => x.expression)
+  |> List.length;
+
+let is_only_word_empty_expression = (block, path, cell_idx) =>
+  num_words_expression(block, cell_idx) == 1
+  && Core.Block.get_word_path(path, block) == Some("_");
+
 let rec apply: (Model.t, t, unit, ~schedule_action: 'a) => Model.t =
   (model: Model.t, update: t, state: State.t, ~schedule_action) => {
     let model =
       switch (update) {
-      | SetFocus(focus) => update_focus(_ => focus, model)
+      | SetFocus(focus) =>
+        //TODO: check if previous focus is empty word, and if so delete it maybe?
+        // do we distinguish between empty words and holes?
+        update_focus(_ => focus, model)
       | SetDraggedPath(path) => update_dragged_path(_ => path, model)
       | PickupCell(idx) => update_carried_cell(_ => idx, model)
       | PickupWord(word) => update_carried_word(_ => word, model)
       | SwapCells(a, b) => update_world(ListUtil.swap(a, b), model)
       | Delete(path) =>
         switch (path) {
+        | [Cell(Index(cell_idx, _)), Field(Expression), _, ..._]
+            when is_only_word_empty_expression(model.world, path, cell_idx) => model
         | [
             Cell(Index(cell_idx, _)),
-            Field(Expression),
+            Field(_),
             Word(Index(word_idx, _)),
             ..._,
           ] =>
@@ -89,7 +103,16 @@ let rec apply: (Model.t, t, unit, ~schedule_action: 'a) => Model.t =
               },
             model,
           );
-        apply(m, SetFocus(SingleCell(path)), state, ~schedule_action);
+        apply(
+          m,
+          switch (path) {
+          | [c, f, ..._] =>
+            SetFocus(SingleCell([c, f, Word(Index(sep_idx, 666))])) //TODO
+          | _ => SetFocus(SingleCell(path))
+          },
+          state,
+          ~schedule_action,
+        );
       | UpdateFocusedWord(f) =>
         switch (model.focus) {
         | SingleCell(path) =>

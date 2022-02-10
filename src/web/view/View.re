@@ -170,7 +170,7 @@ let word_sep_view = (inject, expression_path, model: Model.t, idx) => {
       Attr.on("dragover", _evt => {Event.Prevent_default}),
       Attr.on("dragenter", _evt => {Event.Prevent_default}),
     ],
-    [text("_")] //TODO: nbsp?
+    [text("·")] //TODO: nbsp?
   );
 };
 

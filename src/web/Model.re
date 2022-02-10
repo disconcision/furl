@@ -25,16 +25,16 @@ type t = {
 };
 
 let init_world: Block.t = [
-  {pattern: ["blarg"], expression: ["blorgh", "blug"], value: ["37"]},
+  {pattern: ["blarg"], expression: ["blorgh", "blug"], value: ["?"]},
   {
     pattern: ["freezepop"],
     expression: ["zhmoggle", "katriptic", "klugg"],
-    value: ["4"],
+    value: ["?"],
   },
   {
     pattern: ["crork"],
     expression: ["gagen", "eminem", "452"],
-    value: ["930"],
+    value: ["?"],
   },
 ];
 let init_path: Block.path = [
