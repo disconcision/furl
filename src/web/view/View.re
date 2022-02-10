@@ -5,6 +5,29 @@ module Js = Js_of_ocaml.Js;
 module Dom = Js_of_ocaml.Dom;
 module Dom_html = Js_of_ocaml.Dom_html;
 
+let hash_of_string = str =>
+  List.fold_left(
+    (acc, c) => acc + int_of_char(c),
+    0,
+    List.of_seq(String.to_seq(str)),
+  );
+
+let random_offset = (seed_str, bound_x, bound_y) => {
+  Random.init(hash_of_string(seed_str));
+  let (x, y) = (
+    Random.int(bound_x) - bound_x / 2,
+    Random.int(bound_y) - bound_y / 2,
+  );
+  Attr.string_property(
+    "style",
+    "position: relative; left: "
+    ++ string_of_int(x)
+    ++ "px; top: "
+    ++ string_of_int(y)
+    ++ "px;",
+  );
+};
+
 /*
  Attr.on("dragover", evt => {
           let container_rect =
@@ -52,6 +75,7 @@ let exp_atom_view =
     : t => {
   div(
     [
+      random_offset(word, 10, 8),
       Attr.classes(["atom", "expression-atom", atom_class(path)]),
       Attr.on_click(set_focus(this_path, inject)),
       Attr.create("draggable", "true"),
