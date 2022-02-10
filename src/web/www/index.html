@@ -11,9 +11,22 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
+    <script>
+      document.audioPlay = async url => {
+        const context = new AudioContext();
+        const source = context.createBufferSource();
+        const audioBuffer = await fetch(url)
+          .then(res => res.arrayBuffer())
+          .then(ArrayBuffer => context.decodeAudioData(ArrayBuffer));
+        source.buffer = audioBuffer;
+        source.connect(context.destination);
+        source.start();
+      };;
+    </script>
   </head>
 
   <body spellcheck="false">
+    <audio id="testaud" src="test-meeee.m4a"></audio>
     <div class="container" id="container"></div>
   </body>
 

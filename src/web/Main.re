@@ -49,8 +49,13 @@ module App = {
     Component.create(
       //~apply_action=Web.Update.apply(model),
       ~apply_action=Web.Update.apply(model),
-      // ~on_display=
-      //   (_, ~schedule_action as _) => {print_endline("on_display")},
+      /*
+       ~on_display=
+         (_, ~schedule_action as _) => {
+          //Web.JsUtil.play_sound();
+           print_endline("on_display");
+         },
+         */
       model,
       //Web.Page.view(~inject, model),
       Web.View.view(~inject, model),

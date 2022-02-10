@@ -8,7 +8,7 @@
 (library
  (name web)
  (modules :standard \ Main)
- (libraries sexplib incr_dom util core)
+ (libraries sexplib incr_dom util core webaudio)
  (js_of_ocaml
   (flags
    (:include js-of-ocaml-flags-%{profile})))
