@@ -996,6 +996,7 @@ body {
 }
 
 #root {
+  height: 700px;
   padding: 5em;
   font-family: 'Press Start 2P', monospace;
 }
@@ -1070,4 +1071,12 @@ body {
 
 .word-separator:hover{
   color: #9799f6;
+}
+
+.cell-separator {
+    height: 3px;
+}
+
+.cell-separator:hover {
+  background-color: #e9c6ff;
 }

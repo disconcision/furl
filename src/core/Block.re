@@ -75,6 +75,19 @@ type annotated_block = {
   cells: list(annotated_cell),
 };
 
+let running_index = ref(0);
+let running_names = ["foo", "bar", "baz", "clu", "dre", "gar", "bro", "wee"];
+
+let empty_word: word = "🕳️";
+
+let init_cell: 'a => cell =
+  () => {
+    let i = running_index^;
+    running_index := running_index^ + 1;
+    let name = List.nth(running_names, i mod List.length(running_names));
+    {pattern: [name], expression: [empty_word], value: ["?"]};
+  };
+
 let rec is_valid_path: (t, path) => bool =
   (block, path) =>
     switch (path) {
@@ -167,15 +180,19 @@ let update_pattern: (t, int, words => words) => t =
       {...cell, pattern: f(pattern)}
     );
 
-let get_word: (int, field, int, t) => string =
-  (cell_idx, field, word_idx, block) => {
+let get_words: (int, field, t) => list(string) =
+  (cell_idx, field, block) => {
     let cell = nth_cell(block, cell_idx);
     switch (field) {
-    | Expression => nth_word(cell.expression, word_idx)
-    | Pattern => nth_word(cell.pattern, word_idx)
-    | Value => nth_word(cell.value, word_idx)
+    | Expression => cell.expression
+    | Pattern => cell.pattern
+    | Value => cell.value
     };
   };
+
+let get_word: (int, field, int, t) => string =
+  (cell_idx, field, word_idx, block) =>
+    nth_word(get_words(cell_idx, field, block), word_idx);
 
 let get_word_path: (path, t) => option(string) =
   (path, block) =>
@@ -187,6 +204,14 @@ let get_word_path: (path, t) => option(string) =
         ..._,
       ] =>
       Some(get_word(cell_idx, field, word_idx, block))
+    | _ => None
+    };
+
+let get_words_path: (path, t) => option(words) =
+  (path, block) =>
+    switch (path) {
+    | [Cell(Index(cell_idx, _)), Field(field), ..._] =>
+      Some(get_words(cell_idx, field, block))
     | _ => None
     };
 

@@ -12,7 +12,7 @@ let hash_of_string = str =>
     List.of_seq(String.to_seq(str)),
   );
 
-let random_offset = (seed_str, bound_x, bound_y) => {
+let random_offset = (~bound_x=5, ~bound_y=8, seed_str) => {
   Random.init(hash_of_string(seed_str));
   let (x, y) = (
     Random.int(bound_x) - bound_x / 2,
@@ -25,6 +25,21 @@ let random_offset = (seed_str, bound_x, bound_y) => {
     ++ "px; top: "
     ++ string_of_int(y)
     ++ "px;",
+  );
+};
+
+let random_skew = (~bound_x=32, ~bound_y=1.2, seed_str) => {
+  Random.init(hash_of_string(seed_str));
+  let (x, y) = (
+    Random.int(bound_x) - bound_x / 2,
+    Random.float(bound_y) -. bound_y /. 2.,
+  );
+  print_endline(
+    Printf.sprintf("transform: SkewY(%fdeg) SkewX(%ddeg);", y, x),
+  );
+  Attr.string_property(
+    "style",
+    Printf.sprintf("transform: SkewY(%fdeg) SkewX(%ddeg);", y, x),
   );
 };
 
@@ -75,7 +90,7 @@ let exp_atom_view =
     : t => {
   div(
     [
-      random_offset(word, 10, 8),
+      random_offset(word),
       Attr.classes(["atom", "expression-atom", atom_class(path)]),
       Attr.on_click(set_focus(this_path, inject)),
       Attr.create("draggable", "true"),
@@ -95,33 +110,35 @@ let exp_atom_view =
 
 let pat_atom_view =
     (
-      {word: s, path: this_path}: Core.Block.annotated_word,
+      {word, path: this_path}: Core.Block.annotated_word,
       ~path: option(Core.Block.path),
       ~inject,
     )
     : t => {
   div(
     [
+      random_offset(word),
       Attr.classes(["atom", "pattern-atom", atom_class(path)]),
       Attr.on_click(set_focus(this_path, inject)),
     ],
-    [text(s)],
+    [text(word)],
   );
 };
 
 let val_atom_view =
     (
-      {word: s, path: this_path}: Core.Block.annotated_word,
+      {word, path: this_path}: Core.Block.annotated_word,
       ~path: option(Core.Block.path),
       ~inject,
     )
     : t => {
   div(
     [
+      random_offset(word),
       Attr.classes(["atom", "value-atom", atom_class(path)]),
       Attr.on_click(set_focus(this_path, inject)),
     ],
-    [text(s)],
+    [text(word)],
   );
 };
 
@@ -173,7 +190,9 @@ let word_sep_view = (inject, expression_path, model: Model.t, idx) => {
         Event.(
           Many([
             Stop_propagation,
-            inject(Update.InsertWord(expression_path, idx, "_")),
+            inject(
+              Update.InsertWord(expression_path, idx, Core.Block.empty_word),
+            ),
           ])
         )
       ),
@@ -194,7 +213,7 @@ let word_sep_view = (inject, expression_path, model: Model.t, idx) => {
       Attr.on("dragover", _evt => {Event.Prevent_default}),
       Attr.on("dragenter", _evt => {Event.Prevent_default}),
     ],
-    [text("·")] //TODO: nbsp?
+    [text("·")],
   );
 };
 
@@ -218,6 +237,40 @@ let expression_view =
     );
   let views = Util.ListUtil.interleave(sep_views, word_views);
   div([Attr.classes(["expression-view", atom_class(path)])], views);
+};
+
+let cell_sep_view = (~inject, _model: Model.t, cell_idx) => {
+  div(
+    [
+      Attr.classes(["cell-separator"]),
+      Attr.on_click(_evt =>
+        Event.(
+          Many([
+            Stop_propagation,
+            inject(Update.InsertCell(cell_idx, Core.Block.init_cell())),
+          ])
+        )
+      ),
+      /*
+       Attr.on("drop", _evt =>
+         Event.(
+           Many([
+             Stop_propagation,
+             inject(
+               Update.InsertWord(expression_path, idx, model.carried_word),
+             ),
+             // need to be more careful with paths if want to delete (case where same cell)
+             // if delete before insert, then its fine if you're moving word left.
+             // but if moving right, need to decrement insert idx
+             //inject(Update.Delete(model.dragged_path)),
+           ])
+         )
+       ),*/
+      Attr.on("dragover", _evt => {Event.Prevent_default}),
+      Attr.on("dragenter", _evt => {Event.Prevent_default}),
+    ],
+    [text("")],
+  );
 };
 
 let cell_view =
@@ -252,8 +305,9 @@ let cell_view =
     };
   div(
     [
+      random_skew(string_of_int(idx)),
       Attr.classes(["cell-view", cell_class]),
-      Attr.on_click(_evt => inject(Update.SetFocus(SingleCell(this_path)))),
+      Attr.on_click(set_focus(this_path, inject)),
       Attr.create("draggable", "true"),
       Attr.on("dragstart", _evt =>
         Event.(
@@ -264,7 +318,12 @@ let cell_view =
         )
       ),
       Attr.on("drop", _evt =>
-        inject(Update.SwapCells(idx, model.carried_cell))
+        Event.(
+          Many([
+            Stop_propagation,
+            inject(Update.SwapCells(idx, model.carried_cell)),
+          ])
+        )
       ),
       Attr.on("dragover", _evt => {Event.Prevent_default}),
       Attr.on("dragenter", _evt => {Event.Prevent_default}),
@@ -277,31 +336,43 @@ let cell_view =
   );
 };
 
+let delete = (~inject, path, _evt) =>
+  Event.(Many([Stop_propagation, inject(Update.Delete(path))]));
+
 let title_view = ({dragged_path, _}: Model.t, ~inject) =>
   div(
     [
       Attr.class_("title"),
-      Attr.on("drop", _evt => {
-        Event.(
-          Many([Stop_propagation, inject(Update.Delete(dragged_path))])
-        )
-      }),
+      Attr.on("drop", delete(~inject, dragged_path)),
       Attr.on("dragover", _evt => {Event.Prevent_default}),
       Attr.on("dragenter", _evt => {Event.Prevent_default}),
     ],
-    [text("furl 🗑️")],
+    [text("furl ")] //🗑️
   );
 
-let view = (~inject, {world, focus, _} as model: Model.t) => {
-  let {path: _this_path, cells}: Core.Block.annotated_block =
-    Core.Block.annotate_block(world);
-  let SingleCell(path) = focus;
+let cells_view = (~inject, ~model, path: Core.Block.path, cells) => {
   let get_focus = (i: int): option(Core.Block.path) =>
     switch (path) {
     | [] => None
     | [Cell(Index(idx, _)), ...subpath] => i == idx ? Some(subpath) : None
     | _ => failwith("Keyboard.view impossible")
     };
+  let cell_views =
+    List.mapi(
+      (idx, cell) =>
+        cell_view(~inject, cell, ~path=get_focus(idx), idx, model),
+      cells,
+    );
+  let sep_views =
+    List.init(List.length(cell_views) + 1, cell_sep_view(~inject, model));
+  let views = Util.ListUtil.interleave(sep_views, cell_views);
+  div([], views);
+};
+
+let view = (~inject, {world, focus, _} as model: Model.t) => {
+  let {path: _this_path, cells}: Core.Block.annotated_block =
+    Core.Block.annotate_block(world);
+  let SingleCell(path) = focus;
   let block_class =
     switch (path) {
     | [] => "focussed"
@@ -309,12 +380,15 @@ let view = (~inject, {world, focus, _} as model: Model.t) => {
     };
   div(
     [Attr.class_(block_class)]
-    @ [Attr.id("root"), ...Keyboard.handlers(~inject, model)],
+    @ [
+      Attr.id("root"),
+      Attr.on_click(_ => inject(Update.SetFocus(SingleCell([])))),
+      Attr.on("drop", delete(~inject, model.dragged_path)),
+      Attr.on("dragover", _evt => {Event.Prevent_default}),
+      Attr.on("dragenter", _evt => {Event.Prevent_default}),
+      ...Keyboard.handlers(~inject, model),
+    ],
     [title_view(model, ~inject)]
-    @ List.mapi(
-        (idx, cell) =>
-          cell_view(~inject, cell, ~path=get_focus(idx), idx, model),
-        cells,
-      ),
+    @ [cells_view(~inject, ~model, path, cells)],
   );
 };
