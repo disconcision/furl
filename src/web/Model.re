@@ -25,23 +25,37 @@ type t = {
 };
 
 let init_world: Block.t = [
-  {pattern: ["blarg"], expression: ["blorgh", "blug"], value: ["blee"]},
+  {pattern: ["blarg"], expression: ["blorgh", "blug"], value: ["37"]},
   {
-    pattern: ["fzerpoib"],
+    pattern: ["freezepop"],
     expression: ["zhmoggle", "katriptic", "klugg"],
-    value: ["dolen"],
+    value: ["4"],
   },
   {
     pattern: ["crork"],
-    expression: ["gagen", "tal", "452"],
-    value: ["bumkid"],
+    expression: ["gagen", "eminem", "452"],
+    value: ["930"],
   },
 ];
+let init_path: Block.path = [
+  Cell(Index(0, 3)),
+  Field(Expression),
+  Word(Index(0, 2)),
+  Char(Index(0, 6)),
+];
+
+assert(Block.is_valid_path(init_world, init_path));
+
+print_endline(
+  Sexplib.Sexp.to_string_hum(
+    Block.sexp_of_annotated_block(Block.annotate_block(init_world)),
+  ),
+);
 
 let init = {
-  world: Block.init_world,
+  world: init_world,
   cell_proj: ExpressionPattern,
-  focus: SingleCell(Block.init_path),
+  focus: SingleCell(init_path),
   carried_cell: 0,
   carried_word: "",
   dragged_path: [],

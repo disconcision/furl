@@ -59,6 +59,9 @@
 }
 
 :root {
+
+  --base-radius: 0.1em;
+
   --light-page-color: #fdf6e3;
   --light-text-color: #586e75;
   --delim-color: #657b83;
@@ -1000,7 +1003,7 @@ body {
 .cell-view {
   display: flex;
   height: 1.5em;
-  border-radius: 0.4em;
+  border-radius: var(--base-radius);
   padding-left: 1em; /* HACK */
   cursor: pointer;
 }
@@ -1014,7 +1017,7 @@ body {
 }
 
 
-.expression-view, .pattern-view {
+.expression-view, .pattern-view, .value-view {
   display: flex;
   /*gap: 1em;*/
   height: 1.5em;
@@ -1024,6 +1027,14 @@ body {
 .pattern-view {
   width: 10em;
   color: #f56197;
+}
+
+.expression-view {
+  width: 30em;
+}
+
+.value-view {
+  color: rgb(44 210 196);
 }
 
 .expression-atom, .pattern-atom {
@@ -1043,10 +1054,10 @@ body {
 
 .atom.on-path, .atom.focussed, .atom:hover {
   background-color: #d7cefc;
-  border-radius: 0.5em;
+  border-radius: var(--base-radius);
 }
 
 .word-separator{
   color: #0000;
-  border-radius: 0.4em;
+  border-radius: var(--base-radius);
 }
