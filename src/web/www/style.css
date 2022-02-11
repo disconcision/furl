@@ -991,8 +991,42 @@ body {
 }
 
 .title {
-  height: 4em;
-  color: #c4b9ed;
+  font-size: 1.5em;
+    display: flex;
+    height: 3em;
+    transform: skewY(2deg) skewX(17deg);
+}
+.title-f {
+  position: relative;
+  color: #9699f6;
+  background-color: #e1d8fd;
+  border-bottom-left-radius: 1em;
+  text-shadow: 3px 0 #7d346b;
+}
+.title-u {
+  position: relative;
+  top: 4px;
+  right: -2px;
+  color: #f56197;
+  background-color: #d3dcff;
+  text-shadow: 3px 0 #00ffee;
+}
+.title-r {
+  position: relative;
+  top: -4px;
+  right: -2px;
+  color: rgb(44 210 196);
+  background-color: #fdd6f6;
+  text-shadow: 3px 0 #00ffee;
+}
+.title-l {
+  position: relative;
+  top: 1px;
+  right: -3px;
+  color: rgb(255 180 64);
+  background-color: #caf1cd;
+  border-bottom-right-radius: 3em;
+  text-shadow: 3px 0 #009aff;
 }
 
 #root {
@@ -1028,6 +1062,10 @@ body {
 .pattern-view {
   width: 10em;
   color: #f56197;
+  text-shadow: 3px 2px #00fff1;
+}
+.pattern-atom.focussed {
+  text-shadow: 5px 3px #00000099;
 }
 
 .expression-view {
@@ -1036,6 +1074,11 @@ body {
 
 .value-view {
   color: rgb(44 210 196);
+  /*text-shadow: 2px 1px #184a35;*/
+}
+
+.expression-atom {
+  color: #194b57;
 }
 
 .expression-atom, .pattern-atom {
@@ -1057,7 +1100,7 @@ body {
   outline: solid 2px #9799f6;
   background-color: #9799f6;
   color: #e8e2ff !important;
-  border-radius: 0.02em;
+  border-radius: 0em;
 }
 
  .atom:hover {

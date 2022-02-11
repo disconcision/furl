@@ -120,6 +120,16 @@ let pat_atom_view =
       random_offset(word),
       Attr.classes(["atom", "pattern-atom", atom_class(path)]),
       Attr.on_click(set_focus(this_path, inject)),
+      Attr.create("draggable", "true"),
+      Attr.on("dragstart", _evt => {
+        Event.(
+          Many([
+            Stop_propagation,
+            inject(Update.SetDraggedPath(this_path)),
+            inject(Update.PickupWord(word)),
+          ])
+        )
+      }),
     ],
     [text(word)],
   );
@@ -347,7 +357,12 @@ let title_view = ({dragged_path, _}: Model.t, ~inject) =>
       Attr.on("dragover", _evt => {Event.Prevent_default}),
       Attr.on("dragenter", _evt => {Event.Prevent_default}),
     ],
-    [text("furl ")] //🗑️
+    [
+      divc("title-f", [text("f")]),
+      divc("title-u", [text("u")]),
+      divc("title-r", [text("r")]),
+      divc("title-l", [text("l")]),
+    ] //🗑️
   );
 
 let cells_view = (~inject, ~model, path: Core.Block.path, cells) => {

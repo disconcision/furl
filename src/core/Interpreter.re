@@ -10,7 +10,8 @@
 type env = Environment.t_(option(int));
 
 type prim_fn =
-  | Add;
+  | Add
+  | Mult;
 
 type form =
   | Lit(int)
@@ -31,12 +32,18 @@ let parse_expression: Block.words => form =
     switch (x) {
     | "add"
     | "Add" => App(Add, List.map(parse_atom, xs))
+    | "mult"
+    | "Mult" => App(Mult, List.map(parse_atom, xs))
     | _ =>
       switch (xs) {
       | ["+", x1] => App(Add, List.map(parse_atom, [x, x1]))
       | ["+", x1, "+", x2] => App(Add, List.map(parse_atom, [x, x1, x2]))
       | ["+", x1, "+", x2, "+", x3] =>
         App(Add, List.map(parse_atom, [x, x1, x2, x3]))
+      | ["*", x1] => App(Mult, List.map(parse_atom, [x, x1]))
+      | ["*", x1, "*", x2] => App(Mult, List.map(parse_atom, [x, x1, x2]))
+      | ["*", x1, "*", x2, "*", x3] =>
+        App(Mult, List.map(parse_atom, [x, x1, x2, x3]))
       | _ => Unknown
       }
     };
@@ -59,6 +66,16 @@ let eval_atom: (form, env) => option(int) =
     };
   };
 
+let int_op: (prim_fn, int, int) => int =
+  fun
+  | Add => ((x, y) => x + y)
+  | Mult => ((x, y) => x * y);
+
+let int_op_identity: prim_fn => int =
+  fun
+  | Add => 0
+  | Mult => 1;
+
 let rec eval_expression: (form, env) => option(int) =
   (form, env) => {
     switch (form) {
@@ -69,15 +86,15 @@ let rec eval_expression: (form, env) => option(int) =
       | None => None
       | Some(n) => n
       }
-    | App(Add, xs) =>
+    | App(op, xs) =>
       List.fold_left(
         (acc, x) =>
           switch (acc, eval_expression(x, env)) {
           | (None, _)
           | (_, None) => None
-          | (Some(n), Some(m)) => Some(n + m)
+          | (Some(n), Some(m)) => Some(int_op(op, n, m))
           },
-        Some(0),
+        Some(int_op_identity(op)),
         xs,
       )
     };

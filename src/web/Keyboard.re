@@ -28,7 +28,8 @@ let handlers = (~inject: Update.t => Event.t, model: Model.t) => [
         | "ArrowRight"
         | "ArrowLeft"
         | "ArrowUp"
-        | "ArrowDown" => []
+        | "ArrowDown"
+        | "Shift" => []
         | "Enter" =>
           let SingleCell(path) = model.focus;
           switch (path) {

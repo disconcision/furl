@@ -157,11 +157,12 @@ let rec apply: (Model.t, t, unit, ~schedule_action: 'a) => Model.t =
   };
 
 /*
- TODO:
+  TODO:
 
- put 'add' at top/left for dragging
- put '0' at same
- dragging on numbers changes instead of moves?
+  put 'add' at top/left for dragging
+  put '0' at same
+  dragging on numbers changes instead of moves?
 
+ create references by dragging names
 
-  */
+   */
