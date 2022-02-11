@@ -86,6 +86,7 @@ let exp_atom_view =
       {word, path: this_path}: Core.Block.annotated_word,
       ~path: option(Core.Block.path),
       ~inject,
+      ~model: Model.t,
     )
     : t => {
   div(
@@ -103,6 +104,20 @@ let exp_atom_view =
           ])
         )
       }),
+      Attr.on("drop", _evt =>
+        Event.(
+          Many([
+            Stop_propagation,
+            inject(
+              Update.UpdateWord(
+                this_path,
+                word =>
+                  word == Core.Block.empty_word ? model.carried_word : word,
+              ),
+            ),
+          ])
+        )
+      ),
     ],
     [text(word)],
   );
@@ -237,7 +252,7 @@ let expression_view =
   let word_views =
     List.mapi(
       (idx, word) =>
-        exp_atom_view(word, ~path=get_focus(path, idx), ~inject),
+        exp_atom_view(word, ~path=get_focus(path, idx), ~inject, ~model),
       words,
     );
   let sep_views =
