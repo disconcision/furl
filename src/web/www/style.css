@@ -987,7 +987,6 @@ svg.rail line.unsorted {
 }
 
 body {
-  opacity: 0.8;
   background-image: radial-gradient(#f9a7fe 0.5px, #e8e2ff 1px);
   background-size: 21px 21px;
 }
@@ -1106,6 +1105,15 @@ body {
   cursor: pointer;
 }
 
+.expression-atom.active-drop-target {
+  color: #d05c23;
+    background-color: #ffac30;
+    outline: dashed 13px #ffac30;
+    border-radius: 3em;
+    transform: skew(20deg, 2deg) rotate(5deg);
+    text-decoration: line-through;
+}
+
 /*
 .expression-atom:hover {
   color: rgb(97, 74, 145);
@@ -1121,6 +1129,7 @@ body {
   background-color: #9799f6;
   color: #e8e2ff !important;
   border-radius: 0em;
+  box-shadow: 6px 3px #e4ff00;
   /* temp, replace with random: */
   transform: skewX(12deg) skewY(-1.4deg);
 }
@@ -1181,3 +1190,20 @@ body {
   text-shadow: 1px 1px #fe19b9;
 }
 
+.trash-item {
+  opacity: 0.1;
+  text-decoration-line: line-through;
+  transform: skewX(-20deg) skewY(3deg);
+  color: #3500ff;
+}
+
+.trash-panel {
+  position: absolute;
+  top: 0.5em;
+  left: 0.8em;
+}
+
+.trash-panel:hover {
+  transform: rotate(35deg);
+  text-shadow: 9px 4px yellow;
+}

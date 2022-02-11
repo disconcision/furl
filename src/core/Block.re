@@ -80,13 +80,17 @@ type annotated_block = {
 let running_index = ref(0);
 let running_names = [
   "foo",
-  "crobe",
+  "cruby",
   "baz",
-  "clu",
+  "crunk",
   "dree",
-  "gar",
+  "bar",
+  "gruben",
   "bro",
-  "wee",
+  "freezepop",
+  "weeb",
+  "grug",
+  "carrudy",
 ];
 
 let empty_word: word = "🕳️";

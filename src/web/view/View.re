@@ -86,10 +86,24 @@ let exp_atom_view =
       ~model: Model.t,
     )
     : t => {
+  /*
+   let this_drop_target: Model.drop_target =
+     switch (this_path) {
+     | [Cell(Index(cell_idx, _)), Field(f), Word(Index(idx, _)), ..._] =>
+       WordSeparator((cell_idx, f, idx))
+     | _ => NoTarget
+     };
+   let is_drop_target =
+     model.drop_target != NoTarget && model.drop_target == this_drop_target;
+     */
   div(
     [
       random_offset(word),
-      Attr.classes(["atom", "expression-atom", atom_class(path)]),
+      Attr.classes([
+        "atom",
+        "expression-atom",
+        atom_class(path) /*@ (is_drop_target ? ["active-drop-target"] : [])*/,
+      ]),
       Attr.on_click(set_focus(this_path, inject)),
       Attr.create("draggable", "true"),
       Attr.on("dragstart", _evt => {
@@ -108,13 +122,24 @@ let exp_atom_view =
             inject(
               Update.UpdateWord(
                 this_path,
-                word =>
-                  word == Core.Block.empty_word ? model.carried_word : word,
+                _word => model.carried_word,
+                //word == Core.Block.empty_word ? model.carried_word : word,
               ),
             ),
           ])
         )
       ),
+      /*
+       Attr.on("dragenter", _evt => {
+         Event.Many([
+           Event.Prevent_default,
+           inject(SetDropTarget(this_drop_target)),
+         ])
+       }),
+       Attr.on("dragleave", _evt => {
+         Event.Many([Event.Prevent_default, inject(SetDropTarget(NoTarget))])
+       }),
+       */
     ],
     [text(word)],
   );
@@ -407,7 +432,7 @@ let title_view = ({dragged_path, _}: Model.t, ~inject) =>
       divc("title-u", [text("u")]),
       divc("title-r", [text("r")]),
       divc("title-l", [text("l")]),
-    ] //🗑️
+    ],
   );
 
 let cells_view = (~inject, ~model, path: Core.Block.path, cells) => {
@@ -454,8 +479,65 @@ let toolbar = (~inject): t =>
     [Attr.class_("toolbar")],
     List.map(
       tool_atom_view(~inject),
-      ["add", "mult", "+", "*", "0", "1", "1337"],
+      ["fact", "add", "mult", "+", "*", "0", "1", "1337"],
     ),
+  );
+
+let root_delete = (~inject, path, model: Model.t, evt) => {
+  print_endline(string_of_int(evt##.clientX));
+  print_endline(string_of_int(evt##.clientY));
+  Event.Many(
+    (
+      switch (Core.Block.get_word_path(path, model.world)) {
+      | None => []
+      | Some(word) => [
+          inject(
+            Update.AddWordToTrash(word, (evt##.clientX, evt##.clientY)),
+          ),
+        ]
+      }
+    )
+    @ [delete(~inject, path, evt)],
+  );
+};
+
+let view_trash_item = (~inject, item) => {
+  switch (item) {
+  | Model.TrashedWord(word, (x, y)) =>
+    div(
+      [
+        Attr.class_("trash-item"),
+        Attr.create("draggable", "true"),
+        Attr.on("dragstart", _evt => {
+          Event.(
+            Many([
+              Stop_propagation,
+              inject(Update.SetDraggedPath([])),
+              inject(Update.PickupWord(word)),
+            ])
+          )
+        }),
+        Attr.string_property(
+          "style",
+          Printf.sprintf("position: absolute; top:%dpx; left: %dpx;", y, x),
+        ),
+      ],
+      [text(word)],
+    )
+  };
+};
+
+let view_trash = (~inject, {trash, _}: Model.t) => {
+  div([Attr.class_("trash")], List.map(view_trash_item(~inject), trash));
+};
+
+let trash_panel = (~inject) =>
+  div(
+    [
+      Attr.class_("trash-panel"),
+      Attr.on_click(_ => inject(Update.EmptyTrash)),
+    ],
+    [text("🗑️")],
   );
 
 let view = (~inject, {world, focus, _} as model: Model.t) => {
@@ -472,15 +554,17 @@ let view = (~inject, {world, focus, _} as model: Model.t) => {
     @ [
       Attr.id("root"),
       Attr.on_click(_ => inject(Update.SetFocus(SingleCell([])))),
-      Attr.on("drop", delete(~inject, model.dragged_path)),
+      Attr.on("drop", root_delete(~inject, model.dragged_path, model)),
       Attr.on("dragover", _evt => {Event.Prevent_default}),
       Attr.on("dragenter", _evt => {Event.Prevent_default}),
       ...Keyboard.handlers(~inject, model),
     ],
     [
+      trash_panel(~inject),
       toolbar(~inject),
       title_view(model, ~inject),
       cells_view(~inject, ~model, path, cells),
+      view_trash(model, ~inject),
     ],
   );
 };

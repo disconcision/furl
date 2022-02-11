@@ -15,20 +15,31 @@ type cell_proj =
   | ExpressionPattern;
 
 [@deriving sexp]
-type word_sep_path = (Block.cell_id, Block.field, int);
+type word_path = (Block.cell_id, Block.field, int);
+[@deriving sexp]
+type word_sep_path = word_path;
 [@deriving sexp]
 type cell_sep_path = int;
 [@deriving sexp]
 type drop_target =
   | NoTarget
+  | Word(word_path)
   | WordSeparator(word_sep_path)
   | CellSepatator(int);
+
+[@deriving sexp]
+type trash_item =
+  | TrashedWord(string, (int, int));
+
+[@deriving sexp]
+type trash = list(trash_item);
 
 [@deriving sexp]
 type t = {
   world: Block.t,
   cell_proj,
   focus,
+  trash,
   drop_target,
   carried_cell: int,
   carried_word: string,
@@ -36,23 +47,23 @@ type t = {
 };
 
 let init_world: Block.t = [
-  {pattern: ["blarg"], expression: ["blorgh", "blug"], value: ["?"]},
   {
-    pattern: ["freezepop"],
-    expression: ["zhmoggle", "katriptic", "klugg"],
-    value: ["?"],
+    pattern: ["blarg"],
+    expression: ["add", "77", "5", "123"],
+    value: ["205"],
   },
+  {pattern: ["freezepop"], expression: ["fact", "5"], value: ["120"]},
   {
     pattern: ["crork"],
-    expression: ["gagen", "eminem", "452"],
-    value: ["?"],
+    expression: ["mult", "blarg", "freezepop"],
+    value: ["24600"],
   },
 ];
 let init_path: Block.path = [
   Cell(Index(0, 3)),
   Field(Expression),
-  Word(Index(0, 2)),
-  Char(Index(0, 6)),
+  Word(Index(0, 4)),
+  Char(Index(0, 3)),
 ];
 
 assert(Block.is_valid_path(init_world, init_path));
@@ -71,4 +82,5 @@ let init = {
   carried_word: "",
   dragged_path: [],
   drop_target: NoTarget,
+  trash: [],
 };

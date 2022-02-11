@@ -11,13 +11,21 @@ type env = Environment.t_(option(int));
 
 type prim_fn =
   | Add
-  | Mult;
+  | Mult
+  | Fact;
 
 type form =
   | Lit(int)
   | Var(string)
   | App(prim_fn, list(form))
   | Unknown;
+
+let prim_fn_of_string: string => option(prim_fn) =
+  fun
+  | "add" => Some(Add)
+  | "mult" => Some(Mult)
+  | "fact" => Some(Fact)
+  | _ => None;
 
 let parse_atom: Block.word => form =
   fun
@@ -29,11 +37,8 @@ let parse_expression: Block.words => form =
   | [] => Unknown
   | [x] => parse_atom(x)
   | [x, ...xs] =>
-    switch (x) {
-    | "add"
-    | "Add" => App(Add, List.map(parse_atom, xs))
-    | "mult"
-    | "Mult" => App(Mult, List.map(parse_atom, xs))
+    switch (prim_fn_of_string(x)) {
+    | Some(fn) => App(fn, List.map(parse_atom, xs))
     | _ =>
       switch (xs) {
       | ["+", x1] => App(Add, List.map(parse_atom, [x, x1]))
@@ -44,6 +49,9 @@ let parse_expression: Block.words => form =
       | ["*", x1, "*", x2] => App(Mult, List.map(parse_atom, [x, x1, x2]))
       | ["*", x1, "*", x2, "*", x3] =>
         App(Mult, List.map(parse_atom, [x, x1, x2, x3]))
+      | ["-", x1] => App(Add, List.map(parse_atom, [x, "-" ++ x1]))
+      | ["-", x1, "-", x2] =>
+        App(Add, List.map(parse_atom, [x, "-" ++ x1, "-" ++ x2]))
       | _ => Unknown
       }
     };
@@ -66,15 +74,12 @@ let eval_atom: (form, env) => option(int) =
     };
   };
 
-let int_op: (prim_fn, int, int) => int =
-  fun
-  | Add => ((x, y) => x + y)
-  | Mult => ((x, y) => x * y);
-
-let int_op_identity: prim_fn => int =
-  fun
-  | Add => 0
-  | Mult => 1;
+let rec factorial = x =>
+  if (x <= 2) {
+    x;
+  } else {
+    x * factorial(x - 1);
+  };
 
 let rec eval_expression: (form, env) => option(int) =
   (form, env) => {
@@ -86,19 +91,23 @@ let rec eval_expression: (form, env) => option(int) =
       | None => None
       | Some(n) => n
       }
-    | App(op, xs) =>
-      List.fold_left(
-        (acc, x) =>
-          switch (acc, eval_expression(x, env)) {
-          | (None, _)
-          | (_, None) => None
-          | (Some(n), Some(m)) => Some(int_op(op, n, m))
-          },
-        Some(int_op_identity(op)),
-        xs,
-      )
+    | App(Add, xs) => bin_op((+), 0, env, xs)
+    | App(Mult, xs) => bin_op(( * ), 1, env, xs)
+    | App(Fact, [x]) => un_op(factorial, env, x)
+    | App(Fact, _) => None
     };
-  };
+  }
+and bin_op = (int_op, int_op_identity, env, xs) =>
+  List.fold_left(
+    (acc, x) =>
+      switch (acc, eval_expression(x, env)) {
+      | (Some(n), Some(m)) => Some(int_op(n, m))
+      | _ => None
+      },
+    Some(int_op_identity),
+    xs,
+  )
+and un_op = (op, env, x) => Option.map(op, eval_expression(x, env));
 
 let run_block: Block.t => Block.t =
   block =>

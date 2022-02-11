@@ -4,6 +4,8 @@ open Util;
 [@deriving sexp]
 type t =
   | SwapCells(int, int)
+  | AddWordToTrash(string, (int, int))
+  | EmptyTrash
   | PickupCell(int)
   | SetDraggedPath(Core.Block.path)
   | PickupWord(string)
@@ -46,6 +48,11 @@ let update_drop_target = (f, {drop_target, _} as model: Model.t) => {
   drop_target: f(drop_target),
 };
 
+let update_trash = (f, {trash, _} as model: Model.t) => {
+  ...model,
+  trash: f(trash),
+};
+
 let num_words_expression = (block, cell_idx) =>
   Core.Block.nth_cell(block, cell_idx)
   |> ((x: Core.Block.cell) => x.expression)
@@ -61,6 +68,7 @@ let is_path_to_word: Core.Block.path => bool = path => List.length(path) == 3;
 
 let rec apply: (Model.t, t, unit, ~schedule_action: 'a) => Model.t =
   (model: Model.t, update: t, state: State.t, ~schedule_action) => {
+    let model = update_drop_target(_ => NoTarget, model);
     let model =
       switch (update) {
       | SetFocus(focus) =>
@@ -106,6 +114,9 @@ let rec apply: (Model.t, t, unit, ~schedule_action: 'a) => Model.t =
         | SingleCell(path) =>
           apply(model, Delete(path), state, ~schedule_action)
         }
+      | AddWordToTrash(word, (x, y)) =>
+        update_trash(trash => [TrashedWord(word, (x, y)), ...trash], model)
+      | EmptyTrash => update_trash(_ => [], model)
       | InsertCell(sep_idx, cell) =>
         let m = update_world(ListUtil.insert_at(sep_idx, cell), model);
         apply(
