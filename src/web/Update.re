@@ -49,6 +49,10 @@ let is_only_word_empty_expression = (block, path, cell_idx) =>
   num_words_expression(block, cell_idx) == 1
   && Core.Block.get_word_path(path, block) == Some(Core.Block.empty_word);
 
+let is_path_to_cell: Core.Block.path => bool = path => List.length(path) == 1;
+
+let is_path_to_word: Core.Block.path => bool = path => List.length(path) == 3;
+
 let rec apply: (Model.t, t, unit, ~schedule_action: 'a) => Model.t =
   (model: Model.t, update: t, state: State.t, ~schedule_action) => {
     let model =
@@ -60,7 +64,9 @@ let rec apply: (Model.t, t, unit, ~schedule_action: 'a) => Model.t =
       | SetDraggedPath(path) => update_dragged_path(_ => path, model)
       | PickupCell(idx) => update_carried_cell(_ => idx, model)
       | PickupWord(word) => update_carried_word(_ => word, model)
-      | SwapCells(a, b) => update_world(ListUtil.swap(a, b), model)
+      | SwapCells(a, b) =>
+        is_path_to_cell(model.dragged_path)
+          ? update_world(ListUtil.swap(a, b), model) : model
       | Delete(path) =>
         switch (path) {
         | [Cell(Index(cell_idx, _)), Field(Expression), _, ..._]
