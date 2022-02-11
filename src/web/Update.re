@@ -75,12 +75,16 @@ let rec apply: (Model.t, t, unit, ~schedule_action: 'a) => Model.t =
         is_path_to_cell(model.dragged_path)
           ? update_world(ListUtil.swap(a, b), model) : model
       | Delete(path) =>
+        print_endline("delete:");
+        print_endline(
+          Sexplib.Sexp.to_string_hum(Core.Block.sexp_of_path(path)),
+        );
         switch (path) {
         | [Cell(Index(cell_idx, _)), Field(Expression), _, ..._]
             when is_only_word_empty_expression(model.world, path, cell_idx) => model
         | [
             Cell(Index(cell_idx, _)),
-            Field(_),
+            Field(Expression),
             Word(Index(word_idx, _)),
             ..._,
           ] =>
@@ -93,10 +97,10 @@ let rec apply: (Model.t, t, unit, ~schedule_action: 'a) => Model.t =
               ),
             model,
           )
-        | [Cell(Index(cell_idx, _)), ..._] =>
+        | [Cell(Index(cell_idx, _))] =>
           update_world(ListUtil.remove(cell_idx), model)
         | _ => model
-        }
+        };
       | DeleteFocussedWord =>
         switch (model.focus) {
         | SingleCell(path) =>

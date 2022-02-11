@@ -34,9 +34,6 @@ let random_skew = (~bound_x=32, ~bound_y=1.2, seed_str) => {
     Random.int(bound_x) - bound_x / 2,
     Random.float(bound_y) -. bound_y /. 2.,
   );
-  print_endline(
-    Printf.sprintf("transform: SkewY(%fdeg) SkewX(%ddeg);", y, x),
-  );
   Attr.string_property(
     "style",
     Printf.sprintf("transform: SkewY(%fdeg) SkewX(%ddeg);", y, x),
@@ -288,7 +285,7 @@ let expression_view =
   div([Attr.classes(["expression-view", atom_class(path)])], views);
 };
 
-let cell_sep_view = (~inject, _model: Model.t, cell_idx) => {
+let cell_sep_view = (~inject, model: Model.t, cell_idx) => {
   div(
     [
       Attr.classes(["cell-separator"]),
@@ -315,6 +312,14 @@ let cell_sep_view = (~inject, _model: Model.t, cell_idx) => {
            ])
          )
        ),*/
+      Attr.on("drop", _evt =>
+        Event.(
+          Many([
+            Stop_propagation,
+            inject(Update.SwapCells(cell_idx - 1, model.carried_cell)),
+          ])
+        )
+      ),
       Attr.on("dragover", _evt => {Event.Prevent_default}),
       Attr.on("dragenter", _evt => {Event.Prevent_default}),
     ],
@@ -366,14 +371,15 @@ let cell_view =
           ])
         )
       ),
-      Attr.on("drop", _evt =>
-        Event.(
-          Many([
-            Stop_propagation,
-            inject(Update.SwapCells(idx, model.carried_cell)),
-          ])
-        )
-      ),
+      /*
+       Attr.on("drop", _evt =>
+         Event.(
+           Many([
+             Stop_propagation,
+             inject(Update.SwapCells(idx, model.carried_cell)),
+           ])
+         )
+       ),*/
       Attr.on("dragover", _evt => {Event.Prevent_default}),
       Attr.on("dragenter", _evt => {Event.Prevent_default}),
     ],

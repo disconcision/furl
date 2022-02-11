@@ -21,7 +21,8 @@ type cell_sep_path = int;
 [@deriving sexp]
 type drop_target =
   | NoTarget
-  | WordSeparator(word_sep_path);
+  | WordSeparator(word_sep_path)
+  | CellSepatator(int);
 
 [@deriving sexp]
 type t = {

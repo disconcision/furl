@@ -1008,6 +1008,7 @@ body {
 .title *:hover {
   transform: skewY(7deg) scale(1.3);
   text-shadow: 3px 0 #fe00be;
+  box-shadow: 6px 0px #edff00;
 }
 .title-u {
   position: relative;
@@ -1120,6 +1121,8 @@ body {
   background-color: #9799f6;
   color: #e8e2ff !important;
   border-radius: 0em;
+  /* temp, replace with random: */
+  transform: skewX(12deg) skewY(-1.4deg);
 }
 
  .atom:hover {
@@ -1165,7 +1168,7 @@ body {
 
 .cell-separator:first-child:hover, .cell-separator:last-child:hover {
   outline: double 0.5em beige;
-  opacity: 0.5;
+  opacity: 0.85;
 }
 
 .toolbar {
