@@ -1116,6 +1116,12 @@ body {
   color: #9799f6;
 }
 
+.word-separator.active-drop-target {
+  background-color: beige;
+  outline: double 1em beige;
+  border-radius: 0.1em;
+  }
+
 .cell-separator {
     height: 3px;
 }
@@ -1133,3 +1139,4 @@ body {
   color: #bdfff6;
   text-shadow: 1px 1px #fe19b9;
 }
+

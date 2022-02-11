@@ -207,10 +207,26 @@ let value_view =
   );
 };
 
-let word_sep_view = (inject, expression_path, model: Model.t, idx) => {
+let word_sep_view =
+    (
+      inject,
+      expression_path: Core.Block.path,
+      {drop_target, _} as model: Model.t,
+      idx,
+    ) => {
+  let this_drop_target: Model.drop_target =
+    switch (expression_path) {
+    | [Cell(Index(cell_idx, _)), Field(f), ..._] =>
+      WordSeparator((cell_idx, f, idx))
+    | _ => NoTarget
+    };
+  let is_drop_target =
+    drop_target != NoTarget && drop_target == this_drop_target;
   div(
     [
-      Attr.classes(["word-separator"]),
+      Attr.classes(
+        ["word-separator"] @ (is_drop_target ? ["active-drop-target"] : []),
+      ),
       Attr.on_click(_evt =>
         Event.(
           Many([
@@ -236,7 +252,15 @@ let word_sep_view = (inject, expression_path, model: Model.t, idx) => {
         )
       ),
       Attr.on("dragover", _evt => {Event.Prevent_default}),
-      Attr.on("dragenter", _evt => {Event.Prevent_default}),
+      Attr.on("dragenter", _evt => {
+        Event.Many([
+          Event.Prevent_default,
+          inject(SetDropTarget(this_drop_target)),
+        ])
+      }),
+      Attr.on("dragleave", _evt => {
+        Event.Many([Event.Prevent_default, inject(SetDropTarget(NoTarget))])
+      }),
     ],
     [text("·")],
   );
@@ -406,7 +430,13 @@ let tool_atom_view = (~inject, word): t => {
       Attr.classes(["atom", "toolbar-atom"]),
       Attr.create("draggable", "true"),
       Attr.on("dragstart", _evt => {
-        Event.(Many([Stop_propagation, inject(Update.PickupWord(word))]))
+        Event.(
+          Many([
+            Stop_propagation,
+            inject(Update.SetDraggedPath([])),
+            inject(Update.PickupWord(word)),
+          ])
+        )
       }),
     ],
     [text(word)],

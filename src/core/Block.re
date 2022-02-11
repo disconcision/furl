@@ -29,7 +29,9 @@ type cell = {
 [@deriving sexp]
 type t = list(cell);
 
+[@deriving sexp]
 type cell_id = int;
+[@deriving sexp]
 type word_id = int;
 
 let nth_cell: (t, cell_id) => cell = List.nth;

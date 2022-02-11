@@ -15,10 +15,20 @@ type cell_proj =
   | ExpressionPattern;
 
 [@deriving sexp]
+type word_sep_path = (Block.cell_id, Block.field, int);
+[@deriving sexp]
+type cell_sep_path = int;
+[@deriving sexp]
+type drop_target =
+  | NoTarget
+  | WordSeparator(word_sep_path);
+
+[@deriving sexp]
 type t = {
   world: Block.t,
   cell_proj,
   focus,
+  drop_target,
   carried_cell: int,
   carried_word: string,
   dragged_path: Block.path,
@@ -59,4 +69,5 @@ let init = {
   carried_cell: 0,
   carried_word: "",
   dragged_path: [],
+  drop_target: NoTarget,
 };

@@ -13,6 +13,7 @@ type t =
   | DeleteFocussedWord
   | UpdateWord(Core.Block.path, string => string)
   | UpdateFocusedWord(string => string)
+  | SetDropTarget(Model.drop_target)
   | SetFocus(Model.focus);
 
 let update_focus = (f, {focus, _} as model: Model.t) => {
@@ -40,6 +41,11 @@ let update_dragged_path = (f, {dragged_path, _} as model: Model.t) => {
   dragged_path: f(dragged_path),
 };
 
+let update_drop_target = (f, {drop_target, _} as model: Model.t) => {
+  ...model,
+  drop_target: f(drop_target),
+};
+
 let num_words_expression = (block, cell_idx) =>
   Core.Block.nth_cell(block, cell_idx)
   |> ((x: Core.Block.cell) => x.expression)
@@ -62,6 +68,7 @@ let rec apply: (Model.t, t, unit, ~schedule_action: 'a) => Model.t =
         // do we distinguish between empty words and holes?
         update_focus(_ => focus, model)
       | SetDraggedPath(path) => update_dragged_path(_ => path, model)
+      | SetDropTarget(target) => update_drop_target(_ => target, model)
       | PickupCell(idx) => update_carried_cell(_ => idx, model)
       | PickupWord(word) => update_carried_word(_ => word, model)
       | SwapCells(a, b) =>
@@ -110,6 +117,8 @@ let rec apply: (Model.t, t, unit, ~schedule_action: 'a) => Model.t =
           ~schedule_action,
         );
       | InsertWord(path, sep_idx, new_word) =>
+        // hacky: sometimes ondragleave doesn't get triggered when dropping
+        let model = update_drop_target(_ => NoTarget, model);
         let m =
           update_world(
             world =>
