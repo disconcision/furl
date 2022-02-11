@@ -117,8 +117,8 @@ let rec apply: (Model.t, t, unit, ~schedule_action: 'a) => Model.t =
           ~schedule_action,
         );
       | InsertWord(path, sep_idx, new_word) =>
-        // hacky: sometimes ondragleave doesn't get triggered when dropping
         let model = update_drop_target(_ => NoTarget, model);
+        // hack: sometimes ondragleave doesn't get triggered when dropping
         let m =
           update_world(
             world =>

@@ -987,7 +987,9 @@ svg.rail line.unsorted {
 }
 
 body {
-  background-color: #e8e2ff;
+  opacity: 0.8;
+  background-image: radial-gradient(#f9a7fe 0.5px, #e8e2ff 1px);
+  background-size: 21px 21px;
 }
 
 .title {
@@ -1002,6 +1004,10 @@ body {
   background-color: #e1d8fd;
   border-bottom-left-radius: 1em;
   text-shadow: 3px 0 #7d346b;
+}
+.title *:hover {
+  transform: skewY(7deg) scale(1.3);
+  text-shadow: 3px 0 #fe00be;
 }
 .title-u {
   position: relative;
@@ -1034,6 +1040,19 @@ body {
   padding: 5em;
   font-family: 'Press Start 2P', monospace;
 }
+
+
+
+/*
+#root.drop-target {
+  background-color: #e5e5f7;
+  opacity: 0.8;
+  background-image:  linear-gradient(135deg, #444cf7 25%, transparent 25%), linear-gradient(225deg, #444cf7 25%, transparent 25%), linear-gradient(45deg, #444cf7 25%, transparent 25%), linear-gradient(315deg, #444cf7 25%, #e5e5f7 25%);
+  background-position:  10px 0, 10px 0, 0 0, 0 0;
+  background-size: 20px 20px;
+  background-repeat: repeat;
+}
+*/
 
 .cell-view {
   display: flex;
@@ -1112,6 +1131,14 @@ body {
   border-radius: var(--base-radius);
 }
 
+.word-separator:only-child{
+  width: 8em;
+}
+
+.word-separator:last-child{
+  width: 4em;
+}
+
 .word-separator:hover{
   color: #9799f6;
 }
@@ -1120,14 +1147,25 @@ body {
   background-color: beige;
   outline: double 1em beige;
   border-radius: 0.1em;
-  }
+}
 
 .cell-separator {
     height: 3px;
+    border-radius: 0.1em;
+}
+
+.cell-separator:first-child, .cell-separator:last-child {
+  height: 0.8em;
 }
 
 .cell-separator:hover {
-  background-color: #e9c6ff;
+  background-color: beige;
+  outline: double 0.3em beige;
+}
+
+.cell-separator:first-child:hover, .cell-separator:last-child:hover {
+  outline: double 0.5em beige;
+  opacity: 0.5;
 }
 
 .toolbar {
