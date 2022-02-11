@@ -1123,3 +1123,13 @@ body {
 .cell-separator:hover {
   background-color: #e9c6ff;
 }
+
+.toolbar {
+  display: flex;
+  gap: 1em;
+  position: fixed;
+  right: 7em;
+  top: 5em;
+  color: #bdfff6;
+  text-shadow: 1px 1px #fe19b9;
+}

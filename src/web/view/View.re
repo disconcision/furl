@@ -384,6 +384,29 @@ let cells_view = (~inject, ~model, path: Core.Block.path, cells) => {
   div([], views);
 };
 
+let tool_atom_view = (~inject, word): t => {
+  div(
+    [
+      random_offset(word),
+      Attr.classes(["atom", "toolbar-atom"]),
+      Attr.create("draggable", "true"),
+      Attr.on("dragstart", _evt => {
+        Event.(Many([Stop_propagation, inject(Update.PickupWord(word))]))
+      }),
+    ],
+    [text(word)],
+  );
+};
+
+let toolbar = (~inject): t =>
+  div(
+    [Attr.class_("toolbar")],
+    List.map(
+      tool_atom_view(~inject),
+      ["add", "mult", "+", "*", "0", "1", "1337"],
+    ),
+  );
+
 let view = (~inject, {world, focus, _} as model: Model.t) => {
   let {path: _this_path, cells}: Core.Block.annotated_block =
     Core.Block.annotate_block(world);
@@ -403,7 +426,10 @@ let view = (~inject, {world, focus, _} as model: Model.t) => {
       Attr.on("dragenter", _evt => {Event.Prevent_default}),
       ...Keyboard.handlers(~inject, model),
     ],
-    [title_view(model, ~inject)]
-    @ [cells_view(~inject, ~model, path, cells)],
+    [
+      toolbar(~inject),
+      title_view(model, ~inject),
+      cells_view(~inject, ~model, path, cells),
+    ],
   );
 };
