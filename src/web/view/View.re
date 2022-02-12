@@ -122,8 +122,9 @@ let exp_atom_view =
             inject(
               Update.UpdateWord(
                 this_path,
-                _word => model.carried_word,
-                //word == Core.Block.empty_word ? model.carried_word : word,
+                //_word => model.carried_word,
+                word =>
+                  word == Core.Block.empty_word ? model.carried_word : word,
               ),
             ),
           ])
@@ -178,7 +179,7 @@ let val_atom_view =
       ~path: option(Core.Block.path),
       ~inject,
     )
-    : t => {
+    : t =>
   div(
     [
       random_offset(word),
@@ -187,7 +188,6 @@ let val_atom_view =
     ],
     [text(word)],
   );
-};
 
 let get_focus =
     (path: option(Core.Block.path), i: int): option(Core.Block.path) =>
@@ -396,15 +396,14 @@ let cell_view =
           ])
         )
       ),
-      /*
-       Attr.on("drop", _evt =>
-         Event.(
-           Many([
-             Stop_propagation,
-             inject(Update.SwapCells(idx, model.carried_cell)),
-           ])
-         )
-       ),*/
+      Attr.on("drop", _evt =>
+        Event.(
+          Many([
+            Stop_propagation,
+            inject(Update.SwapCells(idx, model.carried_cell)),
+          ])
+        )
+      ),
       Attr.on("dragover", _evt => {Event.Prevent_default}),
       Attr.on("dragenter", _evt => {Event.Prevent_default}),
     ],
@@ -451,7 +450,7 @@ let cells_view = (~inject, ~model, path: Core.Block.path, cells) => {
   let sep_views =
     List.init(List.length(cell_views) + 1, cell_sep_view(~inject, model));
   let views = Util.ListUtil.interleave(sep_views, cell_views);
-  div([], views);
+  div([Attr.class_("cells-view")], views);
 };
 
 let tool_atom_view = (~inject, word): t => {
@@ -483,9 +482,7 @@ let toolbar = (~inject): t =>
     ),
   );
 
-let root_delete = (~inject, path, model: Model.t, evt) => {
-  print_endline(string_of_int(evt##.clientX));
-  print_endline(string_of_int(evt##.clientY));
+let root_delete = (~inject, path, model: Model.t, evt) =>
   Event.Many(
     (
       switch (Core.Block.get_word_path(path, model.world)) {
@@ -499,9 +496,8 @@ let root_delete = (~inject, path, model: Model.t, evt) => {
     )
     @ [delete(~inject, path, evt)],
   );
-};
 
-let view_trash_item = (~inject, item) => {
+let trash_teim_view = (~inject, item) => {
   switch (item) {
   | Model.TrashedWord(word, (x, y)) =>
     div(
@@ -527,8 +523,8 @@ let view_trash_item = (~inject, item) => {
   };
 };
 
-let view_trash = (~inject, {trash, _}: Model.t) => {
-  div([Attr.class_("trash")], List.map(view_trash_item(~inject), trash));
+let trash_view = (~inject, {trash, _}: Model.t) => {
+  div([Attr.class_("trash")], List.map(trash_teim_view(~inject), trash));
 };
 
 let trash_panel = (~inject) =>
@@ -564,7 +560,7 @@ let view = (~inject, {world, focus, _} as model: Model.t) => {
       toolbar(~inject),
       title_view(model, ~inject),
       cells_view(~inject, ~model, path, cells),
-      view_trash(model, ~inject),
+      trash_view(model, ~inject),
     ],
   );
 };
