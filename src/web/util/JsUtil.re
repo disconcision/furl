@@ -1,5 +1,4 @@
 open Js_of_ocaml;
-open WebAudio;
 
 let get_elem_by_id = id => {
   let doc = Dom_html.document;
@@ -35,32 +34,34 @@ let date_now = () => {
 };
 
 module Dom_html = Js_of_ocaml.Dom_html;
-
-let play_sound = () => {
-  let context = {
-    %js
-    new WebAudio.audioContext;
-  };
-  //const audioElement = document.querySelector('audio');
-  //const track = audioContext.createMediaElementSource(audioElement);
-  /*
-   let audioElement = Dom_html.document##querySelector(Js.string("audio"));
-   let track =
-     context##createMediaElementSource(
-       (audioElement :> Js.t(Dom_html.mediaElement)),
-     );*/
-  let oscillator = context##createOscillator;
-  oscillator##.frequency##.value := 200.0;
-  oscillator##._type := Js.string("sine");
-  let blah = context##.destination;
-  oscillator##connect((blah :> Js.t(WebAudio.audioNode)));
-  //oscillator##start;
-  let _ =
-    Js.Unsafe.coerce(Dom_html.document)##audioPlay(
-      Js.string("test-meeee.m4a"),
-    );
-  print_endline("oscillator_started");
-};
+/*
+ open WebAudio;
+ let play_sound = () => {
+   let context = {
+     %js
+     new WebAudio.audioContext;
+   };
+   //const audioElement = document.querySelector('audio');
+   //const track = audioContext.createMediaElementSource(audioElement);
+   /*
+    let audioElement = Dom_html.document##querySelector(Js.string("audio"));
+    let track =
+      context##createMediaElementSource(
+        (audioElement :> Js.t(Dom_html.mediaElement)),
+      );*/
+   let oscillator = context##createOscillator;
+   oscillator##.frequency##.value := 200.0;
+   oscillator##._type := Js.string("sine");
+   let blah = context##.destination;
+   oscillator##connect((blah :> Js.t(WebAudio.audioNode)));
+   //oscillator##start;
+   let _ =
+     Js.Unsafe.coerce(Dom_html.document)##audioPlay(
+       Js.string("test-meeee.m4a"),
+     );
+   print_endline("oscillator_started");
+ };
+ */
 
 /*
  let context = new%js WebAudio.audioContext in

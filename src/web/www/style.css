@@ -1056,14 +1056,22 @@ body {
 
 .cell-view {
   display: flex;
-  height: 1.5em;
+  /*height: 1.5em;*/
   border-radius: var(--base-radius);
   padding-left: 1em; /* HACK */
   cursor: pointer;
 }
 
 .cell-view.focussed {
-  background-color: #d1ccf8 !important;
+  background-color: #d1ccf899 !important;
+  outline: 5px solid #d1ccf899;
+  border-radius: 0px;
+}
+
+.cell-view.on-path {
+  background-color: #d1ccf877 !important;
+  outline: 5px solid #d1ccf877;
+  border-radius: 0px;
 }
 
 .cell-view:hover {
@@ -1074,7 +1082,7 @@ body {
 .expression-view, .pattern-view, .value-view {
   display: flex;
   /*gap: 1em;*/
-  height: 1.5em;
+  height: 0.8em;
   align-items: center;
 }
 
@@ -1162,7 +1170,7 @@ body {
 }
 
 .cell-separator {
-    height: 3px;
+    height: 0.9em;
     border-radius: 0.1em;
 }
 
@@ -1170,14 +1178,14 @@ body {
   height: 0.8em;
 }
 
-.cell-separator:hover {
-  background-color: beige;
-  outline: double 0.3em beige;
+.cell-separator:hover:first-child, .cell-separator:hover:last-child {
+  background-color: rgba(245, 245, 220, 128);
+  outline: double 0.5em rgba(245, 245, 220, 128);
 }
 
-.cell-separator:first-child:hover, .cell-separator:last-child:hover {
-  outline: double 0.5em beige;
-  opacity: 0.85;
+.cell-separator:hover:not(:first-child):not(:last-child) {
+  background-color: rgba(245, 245, 220, 32);
+  border-radius: 0.5em;
 }
 
 .toolbar {
