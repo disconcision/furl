@@ -610,7 +610,8 @@ let view = (~inject, {world, focus, _} as model: Model.t) => {
  | InfixList(op, list(parsed_atom))
 
  new derived cell fields:
+   referenced_here: list(word) ; from inside
+   bound_here: list(word) ; from inside
    context: list(word) ; from above
-   references: list(word) ; from inside
-   uses: list(path); from below
+   uses: list(path) ; from below
   */

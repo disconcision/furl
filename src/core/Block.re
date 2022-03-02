@@ -64,8 +64,15 @@ type annotated_field = {
 };
 
 [@deriving sexp]
+type vars = {
+  bound_here: words,
+  used_here: words,
+};
+
+[@deriving sexp]
 type annotated_cell = {
   path,
+  vars,
   pattern: annotated_field,
   expression: annotated_field,
   value: annotated_field,
@@ -173,11 +180,26 @@ let annotate_field: (path, words) => annotated_field =
     };
   };
 
+let is_variable_name: word => bool =
+  word =>
+    switch (int_of_string_opt(word)) {
+    | Some(_) => false
+    | None => true
+    };
+//TODO: more
+let get_pat_vars: list(word) => list(word) = pattern => pattern;
+let get_exp_vars: list(word) => list(word) =
+  pattern => List.filter(is_variable_name, pattern);
+
 let annotate_cell: (path, int, int, cell) => annotated_cell =
   (path, length, idx, {pattern, expression, value}) => {
     let path = path @ [Cell(Index(idx, length))];
     {
       path,
+      vars: {
+        bound_here: get_pat_vars(pattern),
+        used_here: get_exp_vars(expression),
+      },
       pattern: annotate_field(path @ [Field(Pattern)], pattern),
       expression: annotate_field(path @ [Field(Expression)], expression),
       value: annotate_field(path @ [Field(Value)], value),
@@ -187,6 +209,7 @@ let annotate_cell: (path, int, int, cell) => annotated_cell =
 let annotate_block: t => annotated_block =
   block => {
     let path = [];
+    //let context = [];
     {
       path,
       cells: List.mapi(annotate_cell(path, List.length(block)), block),
