@@ -78,7 +78,7 @@ type annotated_block = {
 };
 
 let running_index = ref(0);
-let running_names = [
+let _running_names = [
   "foo",
   "cruby",
   "baz",
@@ -91,6 +91,22 @@ let running_names = [
   "weeb",
   "grug",
   "carrudy",
+];
+let running_names = [
+  "📎",
+  "🌽",
+  "💭",
+  "🌘",
+  "🍸",
+  "🎈",
+  "🍋",
+  "🐠",
+  "🖍",
+  "🤘",
+  "🍮",
+  "👌",
+  "🌈",
+  "🐿",
 ];
 
 let empty_word: word = "🕳️";
@@ -145,17 +161,15 @@ and is_valid_path_char: (word, path) => bool =
       false;
     };
 
+let annotate_word = (path, length, idx, word) => {
+  {path: path @ [Word(Index(idx, length))], word};
+};
+
 let annotate_field: (path, words) => annotated_field =
   (path, words) => {
     {
       path,
-      words:
-        List.mapi(
-          (idx, word) => {
-            {path: path @ [Word(Index(idx, List.length(words)))], word}
-          },
-          words,
-        ),
+      words: List.mapi(annotate_word(path, List.length(words)), words),
     };
   };
 

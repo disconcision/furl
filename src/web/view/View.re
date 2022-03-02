@@ -564,3 +564,53 @@ let view = (~inject, {world, focus, _} as model: Model.t) => {
     ],
   );
 };
+
+/*
+
+
+ new styling:
+ - expressions (context-free):
+   - application: background color
+   - application: first word: color
+   - operators: background color, color
+   - word: invalid: color, box, add '?'
+ - expressions (context-sensitive):
+   - word: unbound: color, box, add '?'
+   - operators: adjacent-to-bad-word: opacity
+ - expressions (fancy-semantic)
+   - word: type-mismatch: color
+
+ - patterns (context-sensitive)
+   - word: invalid: color, box, add '?'
+   - word: var: {unused, 1-use, 2+uses}: color
+   - word: var: starred: color (same as 2+uses)
+
+ - values (context-free)
+   - word: warning tag: add ?
+
+ plan:
+ add a parse field to cell for all three fields
+ expression parses:
+ type expression_cat =
+ | Literal | NameBound | NameUnbound | Unformed | FunctionHead | Operator | OperatorIgnore;
+ type pattern_cat =
+ | Literal | NameNew;
+ type cat =
+ | Expression(expression_cat)
+ | Pattern(pattern_cat)
+ | Value;
+
+ type parsed_atom = {
+   word,
+   cat
+ };
+ type parsed_expresion =
+ | Symbol(parsed_atom)
+ | Application(parsed_atom, list(parsed_atom))
+ | InfixList(op, list(parsed_atom))
+
+ new derived cell fields:
+   context: list(word) ; from above
+   references: list(word) ; from inside
+   uses: list(path); from below
+  */
