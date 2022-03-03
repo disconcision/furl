@@ -64,9 +64,12 @@ type annotated_field = {
 };
 
 [@deriving sexp]
+type path_ctx = Environment.t_(path);
+
+[@deriving sexp]
 type vars = {
-  bound_here: words,
-  used_here: words,
+  bound_here: path_ctx,
+  used_here: path_ctx,
 };
 
 [@deriving sexp]
@@ -187,22 +190,30 @@ let is_variable_name: word => bool =
     | None => true
     };
 //TODO: more
-let get_pat_vars: list(word) => list(word) = pattern => pattern;
-let get_exp_vars: list(word) => list(word) =
-  pattern => List.filter(is_variable_name, pattern);
+
+let get_pat_vars: annotated_field => path_ctx =
+  ({words, _}) => List.map(({path, word, _}) => (word, path), words);
+let get_exp_vars: annotated_field => path_ctx =
+  ({words, _}) =>
+    words
+    |> List.map(({path, word, _}) => (word, path))
+    |> List.filter(((word, _)) => is_variable_name(word));
 
 let annotate_cell: (path, int, int, cell) => annotated_cell =
   (path, length, idx, {pattern, expression, value}) => {
     let path = path @ [Cell(Index(idx, length))];
+    let pattern = annotate_field(path @ [Field(Pattern)], pattern);
+    let expression = annotate_field(path @ [Field(Expression)], expression);
+    let value = annotate_field(path @ [Field(Value)], value);
     {
       path,
       vars: {
         bound_here: get_pat_vars(pattern),
         used_here: get_exp_vars(expression),
       },
-      pattern: annotate_field(path @ [Field(Pattern)], pattern),
-      expression: annotate_field(path @ [Field(Expression)], expression),
-      value: annotate_field(path @ [Field(Value)], value),
+      pattern,
+      expression,
+      value,
     };
   };
 
