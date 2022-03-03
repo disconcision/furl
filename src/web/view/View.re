@@ -62,13 +62,47 @@ let random_skew = (~bound_x=32, ~bound_y=1.2, seed_str) => {
         })
  */
 let divc = (cls, contents) => div([Attr.class_(cls)], contents);
-let atom_class: option(Core.Path.t) => string =
+
+let atom_focus_class: option(Core.Path.t) => string =
   path =>
     switch (path) {
     | None => "unfocussed"
     | Some([]) => "focussed"
     | Some(_) => "on-path"
     };
+
+let exp_atom_class: Core.Expression.atom => string =
+  fun
+  | Lit(_) => "exp-atom-lit"
+  | Var(_) => "exp-atom-var"
+  | Unbound(_) => "exp-atom-unbound"
+  | Formless(_) => "exp-atom-formless";
+
+let pat_atom_classes: option(Core.Pattern.atom) => list(string) =
+  fun
+  | Some(Lit(_)) => ["pat-atom-lit"]
+  | Some(Var(_, uses)) => {
+      let uses =
+        switch (uses) {
+        | [] => ["unused"]
+        | [_] => ["1-use"]
+        | _ => ["many-uses"]
+        };
+      ["pat-atom-var"] @ uses;
+    }
+  | _ => ["pat-atom-formless"];
+
+let expression_class: Core.Expression.form => string =
+  fun
+  | Atom(_) => "expr-singleton"
+  | App(_) => "expr-app"
+  | Seq(_) => "expr-seq"
+  | Unknown => "expr-unknown";
+
+let pattern_class: option(Core.Pattern.form) => string =
+  fun
+  | Some(Atom(_)) => "pat-singleton"
+  | _ => "pat-unknown";
 
 let set_focus = (this_path, inject, _evt) =>
   Event.(
@@ -80,7 +114,7 @@ let set_focus = (this_path, inject, _evt) =>
 
 let exp_atom_view =
     (
-      {word, path: this_path, _}: Core.AnnotatedBlock.annotated_word_exp,
+      {word, path: this_path, form, _}: Core.AnnotatedBlock.annotated_word_exp,
       ~path: option(Core.Path.t),
       ~inject,
       ~model: Model.t,
@@ -102,7 +136,8 @@ let exp_atom_view =
       Attr.classes([
         "atom",
         "expression-atom",
-        atom_class(path) /*@ (is_drop_target ? ["active-drop-target"] : [])*/,
+        exp_atom_class(form),
+        atom_focus_class(path) /*@ (is_drop_target ? ["active-drop-target"] : [])*/,
       ]),
       Attr.on_click(set_focus(this_path, inject)),
       Attr.create("draggable", "true"),
@@ -147,7 +182,7 @@ let exp_atom_view =
 
 let pat_atom_view =
     (
-      {word, path: this_path, _}: Core.AnnotatedBlock.annotated_word_pat,
+      {word, path: this_path, form, _}: Core.AnnotatedBlock.annotated_word_pat,
       ~path: option(Core.Path.t),
       ~inject,
     )
@@ -155,7 +190,10 @@ let pat_atom_view =
   div(
     [
       random_offset(word),
-      Attr.classes(["atom", "pattern-atom", atom_class(path)]),
+      Attr.classes(
+        ["atom", "pattern-atom", atom_focus_class(path)]
+        @ pat_atom_classes(form),
+      ),
       Attr.on_click(set_focus(this_path, inject)),
       Attr.create("draggable", "true"),
       Attr.on("dragstart", _evt => {
@@ -182,7 +220,7 @@ let val_atom_view =
   div(
     [
       random_offset(word),
-      Attr.classes(["atom", "value-atom", atom_class(path)]),
+      Attr.classes(["atom", "value-atom", atom_focus_class(path)]),
       Attr.on_click(set_focus(this_path, inject)),
     ],
     [text(word)],
@@ -197,12 +235,18 @@ let get_focus = (path: option(Core.Path.t), i: int): option(Core.Path.t) =>
 
 let pattern_view =
     (
-      {words, path: _, _}: Core.AnnotatedBlock.annotated_pat,
+      {words, path: _, form, _}: Core.AnnotatedBlock.annotated_pat,
       ~path: option(Core.Path.t),
       ~inject,
     ) => {
   div(
-    [Attr.classes(["pattern-view", atom_class(path)])],
+    [
+      Attr.classes([
+        "pattern-view",
+        atom_focus_class(path),
+        pattern_class(form),
+      ]),
+    ],
     List.mapi(
       (idx, word) =>
         pat_atom_view(word, ~path=get_focus(path, idx), ~inject),
@@ -218,7 +262,7 @@ let value_view =
       ~inject,
     ) => {
   div(
-    [Attr.classes(["value-view", atom_class(path)])],
+    [Attr.classes(["value-view", atom_focus_class(path)])],
     List.mapi(
       (idx, word) =>
         val_atom_view(word, ~path=get_focus(path, idx), ~inject),
@@ -286,7 +330,7 @@ let word_sep_view =
 
 let expression_view =
     (
-      {words, path: path_this, _}: Core.AnnotatedBlock.annotated_exp,
+      {words, path: path_this, form, _}: Core.AnnotatedBlock.annotated_exp,
       ~path: option(Core.Path.t),
       ~inject,
       model,
@@ -303,7 +347,16 @@ let expression_view =
       word_sep_view(inject, path_this, model),
     );
   let views = Util.ListUtil.interleave(sep_views, word_views);
-  div([Attr.classes(["expression-view", atom_class(path)])], views);
+  div(
+    [
+      Attr.classes([
+        "expression-view",
+        atom_focus_class(path),
+        expression_class(form),
+      ]),
+    ],
+    views,
+  );
 };
 
 let cell_sep_view = (~inject, model: Model.t, cell_idx) => {

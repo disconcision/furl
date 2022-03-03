@@ -156,7 +156,7 @@ let annotate_cell: (Path.ctx, Path.t, int, int, Cell.t) => annotated_cell =
 let forward_pass: Block.t => annotated_block =
   block => {
     let path = [];
-    let init_ctx = Environment.empty;
+    let init_ctx = [("add", []), ("mult", []), ("fact", [])]; //TODO
     let (cells, _) =
       Base.List.foldi(
         block,
@@ -188,7 +188,7 @@ let gather_uses: (Pattern.uses_ctx, annotated_exp) => Pattern.uses_ctx =
 
 let consume_uses:
   (Pattern.uses_ctx, annotated_pat) => (Pattern.uses_ctx, annotated_pat) =
-  (co_ctx, {path, words, _} as ann_pat) => {
+  (co_ctx, {path, words, _}) => {
     let (new_words, new_ctx) =
       List.fold_left(
         ((acc_words, acc_ctx), {word, _} as ann_pat: annotated_word_pat) => {
@@ -204,7 +204,21 @@ let consume_uses:
         ([], co_ctx),
         List.rev(words),
       );
-    (new_ctx, {...ann_pat, path, words: List.rev(new_words)});
+    (
+      new_ctx,
+      {
+        path,
+        words: List.rev(new_words),
+        form:
+          //TODO: cleanup
+          Some(
+            Pattern.parse(
+              new_ctx,
+              List.map(({word, _}: annotated_word_pat) => word, new_words),
+            ),
+          ),
+      },
+    );
   };
 
 let get_pat_var_uses: annotated_pat => Pattern.uses_ctx =
