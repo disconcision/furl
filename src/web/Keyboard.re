@@ -34,7 +34,7 @@ let handlers = (~inject: Update.t => Event.t, model: Model.t) => [
           let SingleCell(path) = model.focus;
           switch (path) {
           | [Cell(Index(cell_idx, _)), ..._] => [
-              Update.InsertCell(cell_idx + 1, Core.Block.init_cell()),
+              Update.InsertCell(cell_idx + 1, Core.Cell.init()),
             ]
           | _ => []
           };
@@ -42,17 +42,17 @@ let handlers = (~inject: Update.t => Event.t, model: Model.t) => [
           let SingleCell(path) = model.focus;
           switch (path) {
           | [_, _, Word(Index(n, _)), ..._] => [
-              InsertWord(path, n + 1, Core.Block.empty_word),
+              InsertWord(path, n + 1, Core.Word.empty),
             ]
           | _ => []
           };
         | "Delete" => [DeleteFocussedWord]
         | "Backspace" =>
           let SingleCell(path) = model.focus;
-          let words = Block.get_words_path(path, model.world);
+          let words = Path.get_words(path, model.world);
           //TODO: if cell selected, select last word
           switch (words) {
-          | Some([x]) when x == Core.Block.empty_word =>
+          | Some([x]) when x == Core.Word.empty =>
             // if only empty word, delete cell
             switch (path) {
             | [Cell(Index(0, l)), ..._] => [
@@ -66,8 +66,8 @@ let handlers = (~inject: Update.t => Event.t, model: Model.t) => [
             | _ => []
             }
           | _ =>
-            switch (Block.get_word_path(path, model.world)) {
-            | Some(s) when s == Core.Block.empty_word =>
+            switch (Path.get_word(path, model.world)) {
+            | Some(s) when s == Core.Word.empty =>
               let new_path =
                 switch (path) {
                 | [c, _, Word(Index(0, _)), ..._] => [c]
@@ -88,7 +88,7 @@ let handlers = (~inject: Update.t => Event.t, model: Model.t) => [
                 Update.UpdateFocusedWord(
                   str =>
                     String.length(str) == 1
-                      ? Core.Block.empty_word : remove_char(str),
+                      ? Core.Word.empty : remove_char(str),
                 ),
               ]
             }
@@ -96,7 +96,7 @@ let handlers = (~inject: Update.t => Event.t, model: Model.t) => [
 
         | x => [
             Update.UpdateFocusedWord(
-              str => str == Core.Block.empty_word ? x : str ++ x,
+              str => str == Core.Word.empty ? x : str ++ x,
             ),
           ]
         };

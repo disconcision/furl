@@ -1,20 +1,21 @@
 open Sexplib.Std;
 open Util;
+open Core;
 
 [@deriving sexp]
 type t =
   | SwapCells(int, int)
-  | AddWordToTrash(string, (int, int))
+  | AddWordToTrash(Word.t, (int, int))
   | EmptyTrash
   | PickupCell(int)
-  | SetDraggedPath(Core.Block.path)
-  | PickupWord(string)
-  | InsertWord(Core.Block.path, int, string)
-  | InsertCell(int, Core.Block.cell)
-  | Delete(Core.Block.path)
+  | SetDraggedPath(Path.t)
+  | PickupWord(Word.t)
+  | InsertWord(Path.t, int, Word.t)
+  | InsertCell(int, Cell.t)
+  | Delete(Path.t)
   | DeleteFocussedWord
-  | UpdateWord(Core.Block.path, string => string)
-  | UpdateFocusedWord(string => string)
+  | UpdateWord(Path.t, Word.t => Word.t)
+  | UpdateFocusedWord(Word.t => Word.t)
   | SetDropTarget(Model.drop_target)
   | SetFocus(Model.focus);
 
@@ -54,17 +55,17 @@ let update_trash = (f, {trash, _} as model: Model.t) => {
 };
 
 let num_words_expression = (block, cell_idx) =>
-  Core.Block.nth_cell(block, cell_idx)
-  |> ((x: Core.Block.cell) => x.expression)
+  Block.nth_cell(block, cell_idx)
+  |> ((x: Cell.t) => x.expression)
   |> List.length;
 
 let is_only_word_empty_expression = (block, path, cell_idx) =>
   num_words_expression(block, cell_idx) == 1
-  && Core.Block.get_word_path(path, block) == Some(Core.Block.empty_word);
+  && Path.get_word(path, block) == Some(Word.empty);
 
-let is_path_to_cell: Core.Block.path => bool = path => List.length(path) == 1;
+let is_path_to_cell: Path.t => bool = path => List.length(path) == 1;
 
-let is_path_to_word: Core.Block.path => bool = path => List.length(path) == 3;
+let is_path_to_word: Path.t => bool = path => List.length(path) == 3;
 
 let rec apply: (Model.t, t, unit, ~schedule_action: 'a) => Model.t =
   (model: Model.t, update: t, state: State.t, ~schedule_action) => {
@@ -84,9 +85,7 @@ let rec apply: (Model.t, t, unit, ~schedule_action: 'a) => Model.t =
           ? update_world(ListUtil.swap(a, b), model) : model
       | Delete(path) =>
         print_endline("delete:");
-        print_endline(
-          Sexplib.Sexp.to_string_hum(Core.Block.sexp_of_path(path)),
-        );
+        print_endline(Sexplib.Sexp.to_string_hum(Path.sexp_of_t(path)));
         switch (path) {
         | [Cell(Index(cell_idx, _)), Field(Expression), _, ..._]
             when is_only_word_empty_expression(model.world, path, cell_idx) => model
@@ -98,7 +97,7 @@ let rec apply: (Model.t, t, unit, ~schedule_action: 'a) => Model.t =
           ] =>
           update_world(
             world =>
-              Core.Block.update_expression(
+              Block.update_expression(
                 world,
                 cell_idx,
                 ListUtil.remove(word_idx),
@@ -139,7 +138,7 @@ let rec apply: (Model.t, t, unit, ~schedule_action: 'a) => Model.t =
             world =>
               switch (path) {
               | [Cell(Index(cell_idx, _)), Field(Expression), ..._] =>
-                Core.Block.update_expression(
+                Block.update_expression(
                   world,
                   cell_idx,
                   ListUtil.insert_at(sep_idx, new_word),
@@ -173,17 +172,17 @@ let rec apply: (Model.t, t, unit, ~schedule_action: 'a) => Model.t =
                 Word(Index(word_idx, _)),
                 ..._,
               ] =>
-              Core.Block.update_expression(
+              Block.update_expression(
                 world,
                 cell_idx,
-                Core.Block.update_word(f, word_idx),
+                Cell.update_word(f, word_idx),
               )
             | _ => world
             },
           model,
         )
       };
-    update_world(Core.Interpreter.run_block, model);
+    update_world(Interpreter.run_block, model);
   };
 
 /*

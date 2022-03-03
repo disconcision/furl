@@ -5,7 +5,7 @@ let cutoff = (===);
 [@deriving sexp]
 type focus =
   //TODO: revisit
-  | SingleCell(Block.path);
+  | SingleCell(Path.t);
 
 [@deriving sexp]
 type cell_proj =
@@ -14,8 +14,9 @@ type cell_proj =
   //| ExpressionPatternValue
   | ExpressionPattern;
 
+//TODO: refactor to use path
 [@deriving sexp]
-type word_path = (Block.cell_id, Block.field, int);
+type word_path = (Block.cell_id, Cell.field, Cell.word_idx);
 [@deriving sexp]
 type word_sep_path = word_path;
 [@deriving sexp]
@@ -43,7 +44,7 @@ type t = {
   drop_target,
   carried_cell: int,
   carried_word: string,
-  dragged_path: Block.path,
+  dragged_path: Path.t,
 };
 
 let init_world: Block.t = [
@@ -59,18 +60,18 @@ let init_world: Block.t = [
     value: ["24600"],
   },
 ];
-let init_path: Block.path = [
+let init_path: Path.t = [
   Cell(Index(0, 3)),
   Field(Expression),
   Word(Index(0, 4)),
   Char(Index(0, 3)),
 ];
 
-assert(Block.is_valid_path(init_world, init_path));
+assert(Path.is_valid(init_world, init_path));
 
 print_endline(
   Sexplib.Sexp.to_string_hum(
-    Block.sexp_of_annotated_block(Block.annotate_block(init_world)),
+    AnnotatedBlock.sexp_of_annotated_block(AnnotatedBlock.mk(init_world)),
   ),
 );
 

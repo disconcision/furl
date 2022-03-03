@@ -5,7 +5,7 @@ type get_path_res =
   | EscapeBelow
   | EscapeLeft
   | EscapeRight
-  | Path(path);
+  | Path(Core.Path.t);
 
 let col_1_width = 20;
 let col_2_width = 60;
@@ -31,7 +31,8 @@ let rec get_path_to_coord = (block: t, (row: int, col: int)): get_path_res =>
     | x => x
     };
   }
-and get_path_to_coord_cell = (cell: cell, (row: int, col: int)): get_path_res => {
+and get_path_to_coord_cell =
+    (cell: Core.Cell.t, (row: int, col: int)): get_path_res => {
   switch (col) {
   | c when c < 0 => EscapeLeft
   | c when c < col_1_width =>
@@ -61,8 +62,8 @@ and get_path_to_coord_cell = (cell: cell, (row: int, col: int)): get_path_res =>
   };
 }
 and get_path_to_coord_word =
-    (words: words, (_row: int, col: int)): get_path_res => {
-  let get_word_index = (col: int, words: list(word)) => {
+    (words: Core.Word.s, (_row: int, col: int)): get_path_res => {
+  let get_word_index = (col: int, words: Core.Word.s) => {
     let gap_constant = 1;
     let rec gwi = (col, words, index: int, c: int) => {
       switch (words) {

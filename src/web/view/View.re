@@ -62,7 +62,7 @@ let random_skew = (~bound_x=32, ~bound_y=1.2, seed_str) => {
         })
  */
 let divc = (cls, contents) => div([Attr.class_(cls)], contents);
-let atom_class: option(Core.Block.path) => string =
+let atom_class: option(Core.Path.t) => string =
   path =>
     switch (path) {
     | None => "unfocussed"
@@ -80,8 +80,8 @@ let set_focus = (this_path, inject, _evt) =>
 
 let exp_atom_view =
     (
-      {word, path: this_path}: Core.Block.annotated_word,
-      ~path: option(Core.Block.path),
+      {word, path: this_path, _}: Core.AnnotatedBlock.annotated_word,
+      ~path: option(Core.Path.t),
       ~inject,
       ~model: Model.t,
     )
@@ -123,8 +123,7 @@ let exp_atom_view =
               Update.UpdateWord(
                 this_path,
                 //_word => model.carried_word,
-                word =>
-                  word == Core.Block.empty_word ? model.carried_word : word,
+                word => word == Core.Word.empty ? model.carried_word : word,
               ),
             ),
           ])
@@ -148,8 +147,8 @@ let exp_atom_view =
 
 let pat_atom_view =
     (
-      {word, path: this_path}: Core.Block.annotated_word,
-      ~path: option(Core.Block.path),
+      {word, path: this_path, _}: Core.AnnotatedBlock.annotated_word,
+      ~path: option(Core.Path.t),
       ~inject,
     )
     : t => {
@@ -175,8 +174,8 @@ let pat_atom_view =
 
 let val_atom_view =
     (
-      {word, path: this_path}: Core.Block.annotated_word,
-      ~path: option(Core.Block.path),
+      {word, path: this_path, _}: Core.AnnotatedBlock.annotated_word,
+      ~path: option(Core.Path.t),
       ~inject,
     )
     : t =>
@@ -189,8 +188,7 @@ let val_atom_view =
     [text(word)],
   );
 
-let get_focus =
-    (path: option(Core.Block.path), i: int): option(Core.Block.path) =>
+let get_focus = (path: option(Core.Path.t), i: int): option(Core.Path.t) =>
   switch (path) {
   | Some([Word(Index(idx, _)), ...subpath]) =>
     i == idx ? Some(subpath) : None
@@ -199,8 +197,8 @@ let get_focus =
 
 let pattern_view =
     (
-      {words, path: _}: Core.Block.annotated_field,
-      ~path: option(Core.Block.path),
+      {words, path: _}: Core.AnnotatedBlock.annotated_field,
+      ~path: option(Core.Path.t),
       ~inject,
     ) => {
   div(
@@ -215,8 +213,8 @@ let pattern_view =
 
 let value_view =
     (
-      {words, path: _}: Core.Block.annotated_field,
-      ~path: option(Core.Block.path),
+      {words, path: _}: Core.AnnotatedBlock.annotated_field,
+      ~path: option(Core.Path.t),
       ~inject,
     ) => {
   div(
@@ -232,7 +230,7 @@ let value_view =
 let word_sep_view =
     (
       inject,
-      expression_path: Core.Block.path,
+      expression_path: Core.Path.t,
       {drop_target, _} as model: Model.t,
       idx,
     ) => {
@@ -253,9 +251,7 @@ let word_sep_view =
         Event.(
           Many([
             Stop_propagation,
-            inject(
-              Update.InsertWord(expression_path, idx, Core.Block.empty_word),
-            ),
+            inject(Update.InsertWord(expression_path, idx, Core.Word.empty)),
           ])
         )
       ),
@@ -290,8 +286,8 @@ let word_sep_view =
 
 let expression_view =
     (
-      {words, path: path_this}: Core.Block.annotated_field,
-      ~path: option(Core.Block.path),
+      {words, path: path_this}: Core.AnnotatedBlock.annotated_field,
+      ~path: option(Core.Path.t),
       ~inject,
       model,
     ) => {
@@ -318,7 +314,7 @@ let cell_sep_view = (~inject, model: Model.t, cell_idx) => {
         Event.(
           Many([
             Stop_propagation,
-            inject(Update.InsertCell(cell_idx, Core.Block.init_cell())),
+            inject(Update.InsertCell(cell_idx, Core.Cell.init())),
           ])
         )
       ),
@@ -355,8 +351,8 @@ let cell_sep_view = (~inject, model: Model.t, cell_idx) => {
 let cell_view =
     (
       ~inject,
-      {path: this_path, expression, pattern, value, _}: Core.Block.annotated_cell,
-      ~path: option(Core.Block.path),
+      {path: this_path, expression, pattern, value, _}: Core.AnnotatedBlock.annotated_cell,
+      ~path: option(Core.Path.t),
       idx,
       model: Model.t,
     )
@@ -434,8 +430,8 @@ let title_view = ({dragged_path, _}: Model.t, ~inject) =>
     ],
   );
 
-let cells_view = (~inject, ~model, path: Core.Block.path, cells) => {
-  let get_focus = (i: int): option(Core.Block.path) =>
+let cells_view = (~inject, ~model, path: Core.Path.t, cells) => {
+  let get_focus = (i: int): option(Core.Path.t) =>
     switch (path) {
     | [] => None
     | [Cell(Index(idx, _)), ...subpath] => i == idx ? Some(subpath) : None
@@ -485,7 +481,7 @@ let toolbar = (~inject): t =>
 let root_delete = (~inject, path, model: Model.t, evt) =>
   Event.Many(
     (
-      switch (Core.Block.get_word_path(path, model.world)) {
+      switch (Core.Path.get_word(path, model.world)) {
       | None => []
       | Some(word) => [
           inject(
@@ -537,8 +533,8 @@ let trash_panel = (~inject) =>
   );
 
 let view = (~inject, {world, focus, _} as model: Model.t) => {
-  let {path: _this_path, cells}: Core.Block.annotated_block =
-    Core.Block.annotate_block(world);
+  let {path: _this_path, cells}: Core.AnnotatedBlock.annotated_block =
+    Core.AnnotatedBlock.mk(world);
   let SingleCell(path) = focus;
   let block_class =
     switch (path) {
@@ -611,7 +607,4 @@ let view = (~inject, {world, focus, _} as model: Model.t) => {
 
  new derived cell fields:
    referenced_here: list(word) ; from inside
-   bound_here: list(word) ; from inside
-   context: list(word) ; from above
-   uses: list(path) ; from below
   */
