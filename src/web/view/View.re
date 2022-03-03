@@ -80,7 +80,7 @@ let set_focus = (this_path, inject, _evt) =>
 
 let exp_atom_view =
     (
-      {word, path: this_path, _}: Core.AnnotatedBlock.annotated_word,
+      {word, path: this_path, _}: Core.AnnotatedBlock.annotated_word_exp,
       ~path: option(Core.Path.t),
       ~inject,
       ~model: Model.t,
@@ -286,7 +286,7 @@ let word_sep_view =
 
 let expression_view =
     (
-      {words, path: path_this}: Core.AnnotatedBlock.annotated_field,
+      {words, path: path_this, _}: Core.AnnotatedBlock.annotated_exp,
       ~path: option(Core.Path.t),
       ~inject,
       model,

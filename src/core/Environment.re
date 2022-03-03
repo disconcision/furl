@@ -15,11 +15,17 @@ let extend = (ctx, xa) => {
   [xa, ...List.remove_assoc(x, ctx)];
 };
 
-let union = (ctx1, ctx2) => List.fold_left(extend, ctx2, ctx1);
-
 let lookup = (ctx, x) => List.assoc_opt(x, ctx);
 
+let update = (ctx, key, f) => {
+  // NOTE: this somewhat reorders the list
+  let x = lookup(ctx, key);
+  [(key, f(x)), ...List.remove_assoc(key, ctx)];
+};
+
 let contains = (ctx, x) => List.mem_assoc(x, ctx);
+
+let union = (ctx1, ctx2) => List.fold_left(extend, ctx2, ctx1);
 
 /*
 

@@ -3,7 +3,7 @@ open Sexplib.Std;
 [@deriving sexp]
 type atom =
   | Lit(int)
-  | Var(string)
+  | Var(string, Path.t)
   | Unbound(string)
   | Formless(string);
 
@@ -27,20 +27,16 @@ let prim_of_string: string => option(prim) =
   | "fact" => Some(Fact)
   | _ => None;
 
-let valid_var_regex =
-  Re.Str.regexp("^\\([a-zA-Z]\\|_[_a-zA-Z0-9]\\)[_a-zA-Z0-9']*$");
-let is_valid_var = s => Re.Str.string_match(valid_var_regex, s, 0);
-
 //TODO: combine with below
-let parse_exp_atom: (Path.ctx, Word.t) => atom =
+let parse_atom: (Path.ctx, Word.t) => atom =
   (context, word) =>
     switch (
       int_of_string_opt(word),
-      is_valid_var(word),
+      Word.is_valid_var(word),
       Environment.lookup(context, word),
     ) {
     | (Some(n), _, _) => Lit(n)
-    | (_, true, Some(_)) => Var(word)
+    | (_, true, Some(path)) => Var(word, path)
     | (_, true, None) => Unbound(word)
     | _ => Formless(word)
     };
@@ -52,33 +48,31 @@ let is_bound_var: atom => bool =
     | _ => false
     };
 
-//TODO: combine with above
-let parse_atom': Word.t => atom =
-  fun
-  | n when int_of_string_opt(n) != None => Lit(int_of_string(n))
-  | v => Var(v);
-let parse_atom: Word.t => form = word => Atom(parse_atom'(word));
-
-let parse: Word.s => form =
-  fun
-  | [] => Unknown
-  | [x] => parse_atom(x)
-  | [x, ...xs] =>
-    switch (prim_of_string(x)) {
-    | Some(fn) => App(fn, List.map(parse_atom, xs))
-    | _ =>
-      switch (xs) {
-      | ["+", x1] => Seq(Add, List.map(parse_atom, [x, x1]))
-      | ["+", x1, "+", x2] => Seq(Add, List.map(parse_atom, [x, x1, x2]))
-      | ["+", x1, "+", x2, "+", x3] =>
-        Seq(Add, List.map(parse_atom, [x, x1, x2, x3]))
-      | ["*", x1] => Seq(Mult, List.map(parse_atom, [x, x1]))
-      | ["*", x1, "*", x2] => Seq(Mult, List.map(parse_atom, [x, x1, x2]))
-      | ["*", x1, "*", x2, "*", x3] =>
-        Seq(Mult, List.map(parse_atom, [x, x1, x2, x3]))
-      | ["-", x1] => Seq(Add, List.map(parse_atom, [x, "-" ++ x1]))
-      | ["-", x1, "-", x2] =>
-        Seq(Add, List.map(parse_atom, [x, "-" ++ x1, "-" ++ x2]))
-      | _ => Unknown
+let parse: (Path.ctx, Word.s) => form =
+  (ctx, words) => {
+    let parse_word = word => Atom(parse_atom(ctx, word));
+    switch (words) {
+    | [] => Unknown
+    | [x] => parse_word(x)
+    | [x, ...xs] =>
+      switch (prim_of_string(x)) {
+      | Some(fn) => App(fn, List.map(parse_word, xs))
+      | _ =>
+        switch (xs) {
+        | ["+", x1] => Seq(Add, List.map(parse_word, [x, x1]))
+        | ["+", x1, "+", x2] => Seq(Add, List.map(parse_word, [x, x1, x2]))
+        | ["+", x1, "+", x2, "+", x3] =>
+          Seq(Add, List.map(parse_word, [x, x1, x2, x3]))
+        | ["*", x1] => Seq(Mult, List.map(parse_word, [x, x1]))
+        | ["*", x1, "*", x2] =>
+          Seq(Mult, List.map(parse_word, [x, x1, x2]))
+        | ["*", x1, "*", x2, "*", x3] =>
+          Seq(Mult, List.map(parse_word, [x, x1, x2, x3]))
+        | ["-", x1] => Seq(Add, List.map(parse_word, [x, "-" ++ x1]))
+        | ["-", x1, "-", x2] =>
+          Seq(Add, List.map(parse_word, [x, "-" ++ x1, "-" ++ x2]))
+        | _ => Unknown
+        }
       }
     };
+  };

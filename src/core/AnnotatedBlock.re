@@ -4,6 +4,19 @@ open Path;
 [@deriving sexp]
 type annotated_word = {
   path: Path.t,
+  word: Word.t,
+};
+
+[@deriving sexp]
+type annotated_word_pat = {
+  path: Path.t,
+  form: option(Pattern.atom),
+  word: Word.t,
+};
+
+[@deriving sexp]
+type annotated_word_exp = {
+  path: Path.t,
   form: Expression.atom,
   word: Word.t,
 };
@@ -12,6 +25,13 @@ type annotated_word = {
 type annotated_field = {
   path: Path.t,
   words: list(annotated_word),
+};
+
+[@deriving sexp]
+type annotated_exp = {
+  path: Path.t,
+  form: Expression.form,
+  words: list(annotated_word_exp),
 };
 
 [@deriving sexp]
@@ -26,7 +46,7 @@ type annotated_cell = {
   path: Path.t,
   vars,
   pattern: annotated_field,
-  expression: annotated_field,
+  expression: annotated_exp,
   value: annotated_field,
 };
 
@@ -41,14 +61,13 @@ let annotate_word = (path, length, idx, word) => {
     //TODO: specialize parse for patterns, values
     path: path @ [Word(Index(idx, length))],
     word,
-    form: Formless(word),
   };
 };
 
 let annotate_expression_word = (context, path, length, idx, word) => {
   {
     path: path @ [Word(Index(idx, length))],
-    form: Expression.parse_exp_atom(context, word),
+    form: Expression.parse_atom(context, word),
     word,
   };
 };
@@ -64,24 +83,28 @@ let annotate_field: (Path.t, Word.s) => annotated_field =
 let annotate_pat = annotate_field;
 let annotate_val = annotate_field;
 
-let annotate_exp: (Path.ctx, Path.t, Word.s) => annotated_field =
+let annotate_exp: (Path.ctx, Path.t, Word.s) => annotated_exp =
   (context, path, words) => {
+    let form = Expression.parse(context, words);
     let words =
       List.mapi(
         annotate_expression_word(context, path, List.length(words)),
         words,
       );
-    {path, words};
+    {path, form, words};
   };
 
 let get_pat_vars: annotated_field => Path.ctx =
-  //TODO: update when patterns
-  ({words, _}) => List.map(({path, word, _}) => (word, path), words);
+  //TODO: update when composite patterns
+  ({words, _}) =>
+    List.map(({path, word}: annotated_word) => (word, path), words);
 
-let get_bound_exp_vars: annotated_field => Path.ctx =
+let get_bound_exp_vars: annotated_exp => Path.ctx =
   ({words, _}) =>
     words
-    |> List.filter(({form, _}) => Expression.is_bound_var(form))
+    |> List.filter(({form, _}: annotated_word_exp) =>
+         Expression.is_bound_var(form)
+       )
     |> List.map(({path, word, _}) => (word, path));
 
 let annotate_cell: (Path.ctx, Path.t, int, int, Cell.t) => annotated_cell =
@@ -107,22 +130,40 @@ let annotate_cell: (Path.ctx, Path.t, int, int, Cell.t) => annotated_cell =
 let mk: Block.t => annotated_block =
   block => {
     let path = [];
-    let init_context = [];
+    let init_ctx = Environment.empty;
     let (cells, _) =
       Base.List.foldi(
         block,
-        ~init=([], init_context),
+        ~init=([], init_ctx),
         ~f=(idx, (acc_block, acc_ctx), cell) => {
           let ann_cell =
             annotate_cell(acc_ctx, path, List.length(block), idx, cell);
-          (
-            acc_block @ [ann_cell],
-            Environment.union(acc_ctx, ann_cell.vars.bound_here),
-          );
+          let new_ctx = Environment.union(acc_ctx, ann_cell.vars.bound_here);
+          (acc_block @ [ann_cell], new_ctx);
         },
       );
-    {
-      path,
-      cells // List.mapi(annotate_cell(path, List.length(block)), block),
-    };
+    {path, cells};
+  };
+
+let reannotate_cell: (Pattern.uses_ctx, annotated_cell) => annotated_cell =
+  (_coctx, ann_cell) => {
+    //get var uses
+    ann_cell;
+  };
+
+let reverse_pass: annotated_block => annotated_block =
+  ann_block => {
+    let init_co_ctx = Environment.empty;
+    let {cells, path} = ann_block;
+    let (new_cells, _) =
+      Base.List.fold(
+        List.rev(cells),
+        ~init=([], init_co_ctx),
+        ~f=((acc_block, acc_ctx), cell) => {
+          let ann_cell = reannotate_cell(acc_ctx, cell);
+          let new_co_ctx = init_co_ctx; //TODO!!!!!
+          (acc_block @ [ann_cell], new_co_ctx);
+        },
+      );
+    {cells: List.rev(new_cells), path};
   };
