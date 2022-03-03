@@ -17,7 +17,8 @@ type t =
   | UpdateWord(Path.t, Word.t => Word.t)
   | UpdateFocusedWord(Word.t => Word.t)
   | SetDropTarget(Model.drop_target)
-  | SetFocus(Model.focus);
+  | SetFocus(Model.focus)
+  | PrintAnnotatedBlock;
 
 let update_focus = (f, {focus, _} as model: Model.t) => {
   ...model,
@@ -181,6 +182,15 @@ let rec apply: (Model.t, t, unit, ~schedule_action: 'a) => Model.t =
             },
           model,
         )
+      | PrintAnnotatedBlock =>
+        print_endline(
+          Sexplib.Sexp.to_string_hum(
+            AnnotatedBlock.sexp_of_annotated_block(
+              AnnotatedBlock.mk(model.world),
+            ),
+          ),
+        );
+        model;
       };
     update_world(Interpreter.run_block, model);
   };

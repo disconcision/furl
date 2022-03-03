@@ -1,9 +1,11 @@
 type env = Environment.t_(option(int));
 
-let parse_pattern: Word.s => option(string) =
-  fun
-  | [w] => Some(w)
-  | _ => None;
+let rec factorial = x =>
+  if (x <= 2) {
+    x;
+  } else {
+    x * factorial(x - 1);
+  };
 
 let eval_atom: (Expression.atom, env) => option(int) =
   (form, env) => {
@@ -16,13 +18,6 @@ let eval_atom: (Expression.atom, env) => option(int) =
       }
     | _ => None
     };
-  };
-
-let rec factorial = x =>
-  if (x <= 2) {
-    x;
-  } else {
-    x * factorial(x - 1);
   };
 
 let rec eval_expression: (Expression.form, env) => option(int) =
@@ -62,13 +57,14 @@ let run_block: Block.t => Block.t =
         // TODO: clean up this mess (pattern especially)
         let pattern =
           List.map(
-            ({word, _}: AnnotatedBlock.annotated_word) => word,
+            ({word, _}: AnnotatedBlock.annotated_word_pat) => word,
             pattern.words,
           );
         let new_env =
-          switch (parse_pattern(pattern)) {
-          | None => env_acc
-          | Some(name) => Environment.extend(env_acc, (name, result))
+          switch (Pattern.parse([], pattern)) {
+          | Atom(Var(name, _)) =>
+            Environment.extend(env_acc, (name, result))
+          | _ => env_acc
           };
         let value =
           switch (result) {

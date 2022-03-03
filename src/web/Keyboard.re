@@ -24,6 +24,7 @@ let handlers = (~inject: Update.t => Event.t, model: Model.t) => [
         print_endline("key pressed:");
         print_endline(key);
         switch (key) {
+        | "F3" => [PrintAnnotatedBlock]
         // TODO: betterize this garbagio
         | "ArrowRight"
         | "ArrowLeft"

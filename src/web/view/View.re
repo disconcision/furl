@@ -147,7 +147,7 @@ let exp_atom_view =
 
 let pat_atom_view =
     (
-      {word, path: this_path, _}: Core.AnnotatedBlock.annotated_word,
+      {word, path: this_path, _}: Core.AnnotatedBlock.annotated_word_pat,
       ~path: option(Core.Path.t),
       ~inject,
     )
@@ -197,7 +197,7 @@ let get_focus = (path: option(Core.Path.t), i: int): option(Core.Path.t) =>
 
 let pattern_view =
     (
-      {words, path: _}: Core.AnnotatedBlock.annotated_field,
+      {words, path: _, _}: Core.AnnotatedBlock.annotated_pat,
       ~path: option(Core.Path.t),
       ~inject,
     ) => {

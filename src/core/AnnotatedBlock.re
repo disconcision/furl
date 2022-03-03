@@ -1,5 +1,4 @@
 open Sexplib.Std;
-open Path;
 
 [@deriving sexp]
 type annotated_word = {
@@ -28,6 +27,13 @@ type annotated_field = {
 };
 
 [@deriving sexp]
+type annotated_pat = {
+  path: Path.t,
+  form: option(Pattern.form),
+  words: list(annotated_word_pat),
+};
+
+[@deriving sexp]
 type annotated_exp = {
   path: Path.t,
   form: Expression.form,
@@ -36,7 +42,7 @@ type annotated_exp = {
 
 [@deriving sexp]
 type vars = {
-  bound_here: Path.ctx,
+  bound_here: option(Pattern.uses_ctx),
   used_here: Path.ctx,
   context: Path.ctx,
 };
@@ -45,7 +51,7 @@ type vars = {
 type annotated_cell = {
   path: Path.t,
   vars,
-  pattern: annotated_field,
+  pattern: annotated_pat,
   expression: annotated_exp,
   value: annotated_field,
 };
@@ -59,14 +65,14 @@ type annotated_block = {
 let annotate_word = (path, length, idx, word) => {
   {
     //TODO: specialize parse for patterns, values
-    path: path @ [Word(Index(idx, length))],
+    path: path @ [Path.Word(Index(idx, length))],
     word,
   };
 };
 
 let annotate_expression_word = (context, path, length, idx, word) => {
   {
-    path: path @ [Word(Index(idx, length))],
+    path: path @ [Path.Word(Index(idx, length))],
     form: Expression.parse_atom(context, word),
     word,
   };
@@ -80,8 +86,27 @@ let annotate_field: (Path.t, Word.s) => annotated_field =
     };
   };
 
-let annotate_pat = annotate_field;
-let annotate_val = annotate_field;
+let annotate_pattern_word_forward =
+    (path, length, idx, word): annotated_word_pat => {
+  {
+    path: path @ [Path.Word(Index(idx, length))],
+    form: None, //will fill in reverse pass
+    word,
+  };
+};
+
+let annotate_pat: (Path.t, Word.s) => annotated_pat =
+  (path, words) => {
+    {
+      path,
+      words:
+        List.mapi(
+          annotate_pattern_word_forward(path, List.length(words)),
+          words,
+        ),
+      form: None //will fill in reverse pass
+    };
+  };
 
 let annotate_exp: (Path.ctx, Path.t, Word.s) => annotated_exp =
   (context, path, words) => {
@@ -94,10 +119,11 @@ let annotate_exp: (Path.ctx, Path.t, Word.s) => annotated_exp =
     {path, form, words};
   };
 
-let get_pat_vars: annotated_field => Path.ctx =
-  //TODO: update when composite patterns
+let annotate_val = annotate_field;
+
+let get_pat_vars: annotated_pat => Path.ctx =
   ({words, _}) =>
-    List.map(({path, word}: annotated_word) => (word, path), words);
+    List.map(({path, word, _}: annotated_word_pat) => (word, path), words);
 
 let get_bound_exp_vars: annotated_exp => Path.ctx =
   ({words, _}) =>
@@ -117,7 +143,7 @@ let annotate_cell: (Path.ctx, Path.t, int, int, Cell.t) => annotated_cell =
     {
       path,
       vars: {
-        bound_here: get_pat_vars(pattern),
+        bound_here: None, // Will fill in reverse pass
         used_here: get_bound_exp_vars(expression),
         context,
       },
@@ -127,7 +153,7 @@ let annotate_cell: (Path.ctx, Path.t, int, int, Cell.t) => annotated_cell =
     };
   };
 
-let mk: Block.t => annotated_block =
+let forward_pass: Block.t => annotated_block =
   block => {
     let path = [];
     let init_ctx = Environment.empty;
@@ -138,32 +164,84 @@ let mk: Block.t => annotated_block =
         ~f=(idx, (acc_block, acc_ctx), cell) => {
           let ann_cell =
             annotate_cell(acc_ctx, path, List.length(block), idx, cell);
-          let new_ctx = Environment.union(acc_ctx, ann_cell.vars.bound_here);
+          let new_ctx =
+            Environment.union(acc_ctx, get_pat_vars(ann_cell.pattern));
           (acc_block @ [ann_cell], new_ctx);
         },
       );
     {path, cells};
   };
 
-let reannotate_cell: (Pattern.uses_ctx, annotated_cell) => annotated_cell =
-  (_coctx, ann_cell) => {
-    //get var uses
-    ann_cell;
+let gather_uses: (Pattern.uses_ctx, annotated_exp) => Pattern.uses_ctx =
+  (ctx, {words, _}) =>
+    List.fold_left(
+      (acc_ctx, {path, word, _}: annotated_word_exp) =>
+        Environment.update_or_extend(
+          acc_ctx,
+          word,
+          uses => uses @ [path],
+          [path],
+        ),
+      ctx,
+      words,
+    );
+
+let consume_uses:
+  (Pattern.uses_ctx, annotated_pat) => (Pattern.uses_ctx, annotated_pat) =
+  (co_ctx, {path, words, _} as ann_pat) => {
+    let (new_words, new_ctx) =
+      List.fold_left(
+        ((acc_words, acc_ctx), {word, _} as ann_pat: annotated_word_pat) => {
+          let form = Some(Pattern.parse_atom(acc_ctx, word));
+          let new_words = acc_words @ [{...ann_pat, form}];
+          let new_ctx =
+            switch (Environment.lookup(acc_ctx, word)) {
+            | Some(_) => Environment.update(acc_ctx, word, _ => [])
+            | None => acc_ctx
+            };
+          (new_words, new_ctx);
+        },
+        ([], co_ctx),
+        List.rev(words),
+      );
+    (new_ctx, {...ann_pat, path, words: List.rev(new_words)});
+  };
+
+let get_pat_var_uses: annotated_pat => Pattern.uses_ctx =
+  ({words, _}) =>
+    List.fold_left(
+      (acc, {form, _}: annotated_word_pat) =>
+        switch (form) {
+        | Some(Var(name, uses)) => [(name, uses)] @ acc
+        | _ => acc
+        },
+      Environment.empty,
+      words,
+    );
+
+let reverse_annonate_cell:
+  (Pattern.uses_ctx, annotated_cell) => (Pattern.uses_ctx, annotated_cell) =
+  (co_ctx, {pattern, expression, vars, _} as ann_cell) => {
+    let co_ctx = gather_uses(co_ctx, expression);
+    let (co_ctx, pattern) = consume_uses(co_ctx, pattern);
+    let vars = {...vars, bound_here: Some(get_pat_var_uses(pattern))};
+    (co_ctx, {...ann_cell, vars, pattern});
   };
 
 let reverse_pass: annotated_block => annotated_block =
-  ann_block => {
-    let init_co_ctx = Environment.empty;
-    let {cells, path} = ann_block;
+  ({cells, path, _}) => {
     let (new_cells, _) =
       Base.List.fold(
         List.rev(cells),
-        ~init=([], init_co_ctx),
+        ~init=([], Environment.empty),
         ~f=((acc_block, acc_ctx), cell) => {
-          let ann_cell = reannotate_cell(acc_ctx, cell);
-          let new_co_ctx = init_co_ctx; //TODO!!!!!
-          (acc_block @ [ann_cell], new_co_ctx);
+          let (uses_ctx, ann_cell) = reverse_annonate_cell(acc_ctx, cell);
+          (acc_block @ [ann_cell], uses_ctx);
         },
       );
     {cells: List.rev(new_cells), path};
   };
+
+let mk = (block: Block.t): annotated_block => {
+  block |> forward_pass |> reverse_pass;
+};
