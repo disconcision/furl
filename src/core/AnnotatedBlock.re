@@ -153,10 +153,16 @@ let annotate_cell: (Path.ctx, Path.t, int, int, Cell.t) => annotated_cell =
     };
   };
 
+let init_ctx = [
+  ("add", [Path.Cell(Index(-1, -1))]),
+  ("mult", [Path.Cell(Index(-1, -1))]),
+  ("fact", [Path.Cell(Index(-1, -1))]),
+]; //TODO
+
 let forward_pass: Block.t => annotated_block =
   block => {
     let path = [];
-    let init_ctx = [("add", []), ("mult", []), ("fact", [])]; //TODO
+
     let (cells, _) =
       Base.List.foldi(
         block,

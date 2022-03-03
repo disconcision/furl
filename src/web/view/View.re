@@ -76,6 +76,7 @@ let exp_atom_class: Core.Expression.atom => string =
   | Lit(_) => "exp-atom-lit"
   | Var(_) => "exp-atom-var"
   | Unbound(_) => "exp-atom-unbound"
+  | Operator(_) => "exp-atom-operator"
   | Formless(_) => "exp-atom-formless";
 
 let pat_atom_classes: option(Core.Pattern.atom) => list(string) =
@@ -85,7 +86,7 @@ let pat_atom_classes: option(Core.Pattern.atom) => list(string) =
       let uses =
         switch (uses) {
         | [] => ["unused"]
-        | [_] => ["1-use"]
+        | [_] => ["single-use"]
         | _ => ["many-uses"]
         };
       ["pat-atom-var"] @ uses;
@@ -130,15 +131,26 @@ let exp_atom_view =
    let is_drop_target =
      model.drop_target != NoTarget && model.drop_target == this_drop_target;
      */
+  let binding_highlight_class =
+    switch (form, model.focus) {
+    | (Var(_, binding_path), SingleCell(focussed_path))
+        when binding_path == focussed_path => [
+        "binder-selected",
+      ]
+    | _ => []
+    };
   div(
     [
       random_offset(word),
-      Attr.classes([
-        "atom",
-        "expression-atom",
-        exp_atom_class(form),
-        atom_focus_class(path) /*@ (is_drop_target ? ["active-drop-target"] : [])*/,
-      ]),
+      Attr.classes(
+        [
+          "atom",
+          "expression-atom",
+          exp_atom_class(form),
+          atom_focus_class(path) /*@ (is_drop_target ? ["active-drop-target"] : [])*/,
+        ]
+        @ binding_highlight_class,
+      ),
       Attr.on_click(set_focus(this_path, inject)),
       Attr.create("draggable", "true"),
       Attr.on("dragstart", _evt => {
@@ -185,14 +197,24 @@ let pat_atom_view =
       {word, path: this_path, form, _}: Core.AnnotatedBlock.annotated_word_pat,
       ~path: option(Core.Path.t),
       ~inject,
+      ~model: Model.t,
     )
     : t => {
+  let binding_highlight_class =
+    switch (form, model.focus) {
+    | (Some(Var(_, uses)), SingleCell(focussed_path))
+        when List.mem(focussed_path, uses) => [
+        "use-selected",
+      ]
+    | _ => []
+    };
   div(
     [
       random_offset(word),
       Attr.classes(
         ["atom", "pattern-atom", atom_focus_class(path)]
-        @ pat_atom_classes(form),
+        @ pat_atom_classes(form)
+        @ binding_highlight_class,
       ),
       Attr.on_click(set_focus(this_path, inject)),
       Attr.create("draggable", "true"),
@@ -238,6 +260,7 @@ let pattern_view =
       {words, path: _, form, _}: Core.AnnotatedBlock.annotated_pat,
       ~path: option(Core.Path.t),
       ~inject,
+      ~model,
     ) => {
   div(
     [
@@ -249,7 +272,7 @@ let pattern_view =
     ],
     List.mapi(
       (idx, word) =>
-        pat_atom_view(word, ~path=get_focus(path, idx), ~inject),
+        pat_atom_view(word, ~path=get_focus(path, idx), ~inject, ~model),
       words,
     ),
   );
@@ -333,7 +356,7 @@ let expression_view =
       {words, path: path_this, form, _}: Core.AnnotatedBlock.annotated_exp,
       ~path: option(Core.Path.t),
       ~inject,
-      model,
+      ~model,
     ) => {
   let word_views =
     List.mapi(
@@ -457,8 +480,8 @@ let cell_view =
       Attr.on("dragenter", _evt => {Event.Prevent_default}),
     ],
     [
-      pattern_view(pattern, ~path=pattern_path, ~inject),
-      expression_view(expression, ~path=expression_path, ~inject, model),
+      pattern_view(pattern, ~path=pattern_path, ~inject, ~model),
+      expression_view(expression, ~path=expression_path, ~inject, ~model),
       value_view(value, ~path=value_path, ~inject),
     ],
   );
@@ -615,49 +638,24 @@ let view = (~inject, {world, focus, _} as model: Model.t) => {
 };
 
 /*
+  TODO: styling
 
+  - expressions (context-free):
+    - application: background color
+    DONE - application: first word: color
+    DONE - operators: background color, color
+    DONE - word: invalid: color, box, add '?'
+  - expressions (context-sensitive):
+    DONE - word: unbound: color, box, add '?'
+    - operators: adjacent-to-bad-word: opacity
+  - expressions (fancy-semantic)
+    - word: type-mismatch: color
 
- new styling:
- - expressions (context-free):
-   - application: background color
-   - application: first word: color
-   - operators: background color, color
-   - word: invalid: color, box, add '?'
- - expressions (context-sensitive):
-   - word: unbound: color, box, add '?'
-   - operators: adjacent-to-bad-word: opacity
- - expressions (fancy-semantic)
-   - word: type-mismatch: color
+  - patterns (context-sensitive)
+    DONE - word: invalid: color, box, add '?'
+    DONE - word: var: {unused, 1-use, 2+uses}: color
+    - word: var: starred: color (same as 2+uses)
 
- - patterns (context-sensitive)
-   - word: invalid: color, box, add '?'
-   - word: var: {unused, 1-use, 2+uses}: color
-   - word: var: starred: color (same as 2+uses)
-
- - values (context-free)
-   - word: warning tag: add ?
-
- plan:
- add a parse field to cell for all three fields
- expression parses:
- type expression_cat =
- | Literal | NameBound | NameUnbound | Unformed | FunctionHead | Operator | OperatorIgnore;
- type pattern_cat =
- | Literal | NameNew;
- type cat =
- | Expression(expression_cat)
- | Pattern(pattern_cat)
- | Value;
-
- type parsed_atom = {
-   word,
-   cat
- };
- type parsed_expresion =
- | Symbol(parsed_atom)
- | Application(parsed_atom, list(parsed_atom))
- | InfixList(op, list(parsed_atom))
-
- new derived cell fields:
-   referenced_here: list(word) ; from inside
-  */
+  - values (context-free)
+    - word: warning tag: add ?
+ */

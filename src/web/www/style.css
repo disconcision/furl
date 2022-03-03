@@ -61,6 +61,7 @@
 :root {
 
   --base-radius: 0.1em;
+  --main_background-color: #c0aec9;
 
   --light-page-color: #fdf6e3;
   --light-text-color: #586e75;
@@ -1088,15 +1089,41 @@ body {
 
 .pattern-view {
   width: 10em;
-  color: #f56197;
-  text-shadow: 3px 2px #00fff1;
 }
+
 .pattern-atom.focussed {
   text-shadow: 5px 3px #00000099;
 }
 
+.pattern-atom.use-selected {
+  color: #9799f6 !important;
+  text-decoration: underline;
+}
+
+.pattern-atom.pat-atom-var.unused {
+  color: #b0b2e3;
+  text-shadow: 4px 2px #f3f3f3;
+}
+.pattern-atom.pat-atom-var.single-use {
+  color: #f56197;
+  /*text-shadow: 3px 2px #00fff1;*/
+}
+.pattern-atom.pat-atom-var.many-uses {
+  color: #f56197;
+  text-shadow: 3px 2px #00fff1;
+  text-decoration: underline;
+}
+
 .expression-view {
   width: 30em;
+}
+
+.expression-view.expr-app {
+  /*background-color: #efe9fe;*/
+  /* need to adjust dom structure, this backgrounds too much */
+}
+.expression-view.expr-app .expression-atom:nth-child(2) {
+  color: #90c1d0;
 }
 
 .value-view {
@@ -1111,6 +1138,27 @@ body {
 .expression-atom, .pattern-atom {
   display: inline-block;
   cursor: pointer;
+}
+
+.expression-atom.binder-selected {
+  color: #9799f6;
+  text-decoration: underline;
+}
+
+.expression-atom.exp-atom-unbound, .pattern-atom.exp-atom-formless {
+  background-color: var(--main_background-color);
+  color: #e7e2fd;
+  outline: solid 1px var(--main_background-color);
+}
+
+.expression-atom.exp-atom-unbound::after, .expression-atom.exp-atom-formless::after {
+  content: "?";
+}
+
+.expression-atom.exp-atom-operator{
+  background-color: #efe9fe;
+  color: #90c1d0;
+  border-radius: 0.5em;
 }
 
 .expression-atom.active-drop-target {
@@ -1209,6 +1257,7 @@ body {
   position: absolute;
   top: 0.5em;
   left: 0.8em;
+  cursor: pointer;
 }
 
 .trash-panel:hover {

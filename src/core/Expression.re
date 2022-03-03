@@ -5,6 +5,7 @@ type atom =
   | Lit(int)
   | Var(string, Path.t)
   | Unbound(string)
+  | Operator(string)
   | Formless(string);
 
 [@deriving sexp]
@@ -27,6 +28,12 @@ let prim_of_string: string => option(prim) =
   | "fact" => Some(Fact)
   | _ => None;
 
+let is_operator: string => bool =
+  fun
+  | "*"
+  | "+" => true
+  | _ => false;
+
 //TODO: combine with below
 let parse_atom: (Path.ctx, Word.t) => atom =
   (context, word) =>
@@ -35,6 +42,7 @@ let parse_atom: (Path.ctx, Word.t) => atom =
       Word.is_valid_var(word),
       Environment.lookup(context, word),
     ) {
+    | _ when is_operator(word) => Operator(word)
     | (Some(n), _, _) => Lit(n)
     | (_, true, Some(path)) => Var(word, path)
     | (_, true, None) => Unbound(word)
