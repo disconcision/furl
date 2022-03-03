@@ -79,3 +79,94 @@ let get_words: (t, Block.t) => option(Word.s) =
       Some(Block.get_words(cell_idx, field, block))
     | _ => None
     };
+
+let get_num_words = (field_path, block) =>
+  switch (get_words(field_path, block)) {
+  | Some(words) => List.length(words)
+  | None => 0
+  };
+
+let prev_word_path = (block: Cell.s, path: t): t =>
+  switch (path) {
+  | [c, f, Word(Index(n, k)), ...ps] when n >= 1 => [
+      c,
+      f,
+      Word(Index(n - 1, k)),
+      ...ps,
+    ]
+  | [c, Field(Expression), Word(Index(0, _)), ...ps] =>
+    let pat_path = [c, Field(Pattern)];
+    let length = get_num_words(pat_path, block);
+    [c, Field(Pattern), Word(Index(length - 1, length)), ...ps];
+  | [Cell(Index(i, k)), Field(Pattern), Word(Index(0, _)), ...ps]
+      when i != 0 =>
+    let prev_exp_path = [Cell(Index(i - 1, k)), Field(Expression)];
+    let length = get_num_words(prev_exp_path, block);
+    [
+      Cell(Index(i - 1, k)),
+      Field(Expression),
+      Word(Index(length - 1, length)),
+      ...ps,
+    ];
+  | _ => path
+  };
+
+let next_word_path = (block: Cell.s, path: t): t =>
+  switch (path) {
+  | [c, f, Word(Index(n, k)), ...ps] when n + 1 < k => [
+      c,
+      f,
+      Word(Index(n + 1, k)),
+      ...ps,
+    ]
+  | [c, Field(Pattern), Word(Index(_n, _k)), ...ps] =>
+    let exp_path = [c, Field(Expression)];
+    let length = get_num_words(exp_path, block);
+    [c, Field(Expression), Word(Index(0, length)), ...ps];
+  | [Cell(Index(i, k)), Field(Expression), Word(Index(_n, _k)), ...ps]
+      when i + 1 < k =>
+    let next_pat_path = [Cell(Index(i + 1, k)), Field(Pattern)];
+    let length = get_num_words(next_pat_path, block);
+    [
+      Cell(Index(i + 1, k)),
+      Field(Pattern),
+      Word(Index(0, length)),
+      ...ps,
+    ];
+  | _ => path
+  };
+
+let up_word_path = (block: Cell.s, path: t): t =>
+  switch (path) {
+  | [Cell(Index(i, k)), f, Word(Index(n, _k)), ...ps] when i != 0 =>
+    let up_f_path = [Cell(Index(i - 1, k)), f];
+    let length = get_num_words(up_f_path, block);
+    let new_n = n > length - 1 ? length - 1 : n;
+    [Cell(Index(i - 1, k)), f, Word(Index(new_n, length)), ...ps];
+  | _ => path
+  };
+
+let down_word_path = (block: Cell.s, path: t): t =>
+  switch (path) {
+  | [Cell(Index(i, k)), f, Word(Index(n, _k)), ...ps] when i + 1 < k =>
+    let down_f_path = [Cell(Index(i + 1, k)), f];
+    let length = get_num_words(down_f_path, block);
+    let new_n = n > length - 1 ? length - 1 : n;
+    [Cell(Index(i + 1, k)), f, Word(Index(new_n, length)), ...ps];
+  | _ => path
+  };
+
+let prev_word = (block: Cell.s, path: t): option(Word.t) =>
+  get_word(prev_word_path(block, path), block);
+
+let decr_word = (path: t): t =>
+  switch (path) {
+  | [c, _, Word(Index(0, _)), ..._] => [c]
+  | [c, f, Word(Index(n, k)), ...ps] => [
+      c,
+      f,
+      Word(Index(n - 1, k)),
+      ...ps,
+    ]
+  | _ => path
+  };

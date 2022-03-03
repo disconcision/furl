@@ -8,8 +8,6 @@ type cell_id = int;
 
 let nth_cell: (t, cell_id) => Cell.t = List.nth;
 
-// TODO: refactor below to use paths (prob refactor paths first...)
-
 let update_cell: (t, int, Cell.t => Cell.t) => t =
   (block, cell_idx, f) =>
     List.mapi((idx, cell) => idx == cell_idx ? f(cell) : cell, block);
@@ -26,7 +24,7 @@ let update_pattern: (t, int, Word.s => Word.s) => t =
       {...cell, pattern: f(pattern)}
     );
 
-let get_words: (int, Cell.field, t) => list(string) =
+let get_words: (int, Cell.field, t) => Word.s =
   (cell_idx, field, block) => {
     let cell = nth_cell(block, cell_idx);
     switch (field) {
@@ -36,6 +34,6 @@ let get_words: (int, Cell.field, t) => list(string) =
     };
   };
 
-let get_word: (int, Cell.field, int, t) => string =
+let get_word: (int, Cell.field, int, t) => Word.t =
   (cell_idx, field, word_idx, block) =>
-    Cell.nth_word(get_words(cell_idx, field, block), word_idx);
+    List.nth(get_words(cell_idx, field, block), word_idx);
