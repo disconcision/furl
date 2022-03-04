@@ -303,6 +303,11 @@ body {
     border-radius: 0.1em;
 }
 
+.cell-separator.active-drop-target {
+  background-color: beige;
+  border-radius: 0.1em;
+}
+
 .cell-separator:first-child, .cell-separator:last-child {
   height: 0.8em;
 }

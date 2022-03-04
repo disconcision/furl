@@ -5,6 +5,7 @@ open Core;
 [@deriving sexp]
 type t =
   | SwapCells(int, int)
+  | ReorderCell(Block.cell_id, int)
   | AddWordToTrash(Word.t, (int, int))
   | EmptyTrash
   | PickupCell(int)
@@ -77,6 +78,7 @@ let is_path_to_word: Path.t => bool = path => List.length(path) == 3;
 let rec apply: (Model.t, t, unit, ~schedule_action: 'a) => Model.t =
   (model: Model.t, update: t, state: State.t, ~schedule_action) => {
     let model = update_drop_target(_ => NoTarget, model);
+    let app = (a, m) => apply(m, a, state, ~schedule_action);
     let model =
       switch (update) {
       | SetFocus(focus) =>
@@ -117,26 +119,30 @@ let rec apply: (Model.t, t, unit, ~schedule_action: 'a) => Model.t =
         };
       | DeleteFocussedWord =>
         switch (model.focus) {
-        | SingleCell(path) =>
-          apply(model, Delete(path), state, ~schedule_action)
+        | SingleCell(path) => app(Delete(path), model)
         }
       | AddWordToTrash(word, (x, y)) =>
         update_trash(trash => [TrashedWord(word, (x, y)), ...trash], model)
       | EmptyTrash => update_trash(_ => [], model)
       | InsertCell(sep_idx, cell) =>
         let m = update_world(ListUtil.insert_at(sep_idx, cell), model);
-        apply(
-          m,
+        //TODO: index 666
+        app(
           SetFocus(
             SingleCell([
               Cell(Index(sep_idx, List.length(m.world))),
               Field(Expression),
               Word(Index(0, 666)),
             ]),
-          ), //TODO
-          state,
-          ~schedule_action,
+          ),
+          m,
         );
+      | ReorderCell(cell_idx, new_idx) =>
+        let cell = Block.nth_cell(model.world, cell_idx);
+        let new_idx = new_idx > cell_idx ? new_idx - 1 : new_idx;
+        model
+        |> app(Delete([Cell(Index(cell_idx, List.length(model.world)))]))
+        |> app(InsertCell(new_idx, cell));
       | InsertWord(path, sep_idx, new_word) =>
         let model = update_drop_target(_ => NoTarget, model);
         // hack: sometimes ondragleave doesn't get triggered when dropping
@@ -154,8 +160,7 @@ let rec apply: (Model.t, t, unit, ~schedule_action: 'a) => Model.t =
               },
             model,
           );
-        apply(
-          m,
+        app(
           switch (path) {
           | [c, f, ..._] =>
             //TODO: cleanup
@@ -167,13 +172,11 @@ let rec apply: (Model.t, t, unit, ~schedule_action: 'a) => Model.t =
             SetFocus(SingleCell([c, f, Word(Index(sep_idx, k))]));
           | _ => SetFocus(SingleCell(path))
           },
-          state,
-          ~schedule_action,
+          m,
         );
       | UpdateFocusedWord(f) =>
         switch (model.focus) {
-        | SingleCell(path) =>
-          apply(model, UpdateWord(path, f), state, ~schedule_action)
+        | SingleCell(path) => app(UpdateWord(path, f), model)
         }
       | UpdateWord(path, f) =>
         update_world(

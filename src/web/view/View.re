@@ -311,6 +311,48 @@ let value_view =
   );
 };
 
+let cell_sep_view = (~inject, {drop_target, _} as model: Model.t, cell_idx) => {
+  //TODO: add to model equiv of drop_target for currently dragged thing,
+  // so we can make it that can only drop on sort-appropriate targets
+  let this_drop_target: Model.drop_target = CellSepatator(cell_idx);
+  let is_drop_target =
+    drop_target != NoTarget && drop_target == this_drop_target;
+  div(
+    [
+      Attr.classes(
+        ["cell-separator"] @ (is_drop_target ? ["active-drop-target"] : []),
+      ),
+      Attr.on_click(_evt =>
+        Event.(
+          Many([
+            Stop_propagation,
+            inject(Update.InsertCell(cell_idx, Core.Cell.init())),
+          ])
+        )
+      ),
+      Attr.on("drop", _evt =>
+        Event.(
+          Many([
+            Stop_propagation,
+            inject(Update.ReorderCell(model.carried_cell, cell_idx)),
+          ])
+        )
+      ),
+      Attr.on("dragover", _evt => {Event.Prevent_default}),
+      Attr.on("dragenter", _evt => {
+        Event.Many([
+          Event.Prevent_default,
+          inject(SetDropTarget(CellSepatator(cell_idx))),
+        ])
+      }),
+      Attr.on("dragleave", _evt => {
+        Event.Many([Event.Prevent_default, inject(SetDropTarget(NoTarget))])
+      }),
+    ],
+    [text("")],
+  );
+};
+
 let word_sep_view =
     (
       inject,
@@ -399,48 +441,6 @@ let expression_view =
   );
 };
 
-let cell_sep_view = (~inject, model: Model.t, cell_idx) => {
-  div(
-    [
-      Attr.classes(["cell-separator"]),
-      Attr.on_click(_evt =>
-        Event.(
-          Many([
-            Stop_propagation,
-            inject(Update.InsertCell(cell_idx, Core.Cell.init())),
-          ])
-        )
-      ),
-      /*
-       Attr.on("drop", _evt =>
-         Event.(
-           Many([
-             Stop_propagation,
-             inject(
-               Update.InsertWord(expression_path, idx, model.carried_word),
-             ),
-             // need to be more careful with paths if want to delete (case where same cell)
-             // if delete before insert, then its fine if you're moving word left.
-             // but if moving right, need to decrement insert idx
-             //inject(Update.Delete(model.dragged_path)),
-           ])
-         )
-       ),*/
-      Attr.on("drop", _evt =>
-        Event.(
-          Many([
-            Stop_propagation,
-            inject(Update.SwapCells(cell_idx - 1, model.carried_cell)),
-          ])
-        )
-      ),
-      Attr.on("dragover", _evt => {Event.Prevent_default}),
-      Attr.on("dragenter", _evt => {Event.Prevent_default}),
-    ],
-    [text("")],
-  );
-};
-
 let cell_view =
     (
       ~inject,
@@ -485,14 +485,16 @@ let cell_view =
           ])
         )
       ),
-      Attr.on("drop", _evt =>
-        Event.(
-          Many([
-            Stop_propagation,
-            inject(Update.SwapCells(idx, model.carried_cell)),
-          ])
-        )
-      ),
+      /*
+       Attr.on("drop", _evt =>
+         Event.(
+           Many([
+             Stop_propagation,
+             inject(Update.SwapCells(idx, model.carried_cell)),
+           ])
+         )
+       ),
+       */
       Attr.on("dragover", _evt => {Event.Prevent_default}),
       Attr.on("dragenter", _evt => {Event.Prevent_default}),
     ],
@@ -573,17 +575,14 @@ let toolbar = (~inject): t =>
 
 let root_delete = (~inject, path, model: Model.t, evt) =>
   Event.Many(
-    (
-      switch (Core.Path.get_word(path, model.world)) {
-      | None => []
-      | Some(word) => [
-          inject(
-            Update.AddWordToTrash(word, (evt##.clientX, evt##.clientY)),
-          ),
-        ]
-      }
-    )
-    @ [delete(~inject, path, evt)],
+    switch (Core.Path.get_word(path, model.world)) {
+    | None => []
+    | Some(word) => [
+        inject(Update.AddWordToTrash(word, (evt##.clientX, evt##.clientY))),
+      ]
+    },
+    //TODO: restore delete
+    //@ [delete(~inject, path, evt)],
   );
 
 let trash_item_view = (~inject, item) => {
