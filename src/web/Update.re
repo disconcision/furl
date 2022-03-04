@@ -18,7 +18,8 @@ type t =
   | UpdateFocusedWord(Word.t => Word.t)
   | SetDropTarget(Model.drop_target)
   | SetFocus(Model.focus)
-  | PrintAnnotatedBlock;
+  | PrintAnnotatedBlock
+  | TogglePatternDisplay;
 
 let update_focus = (f, {focus, _} as model: Model.t) => {
   ...model,
@@ -53,6 +54,11 @@ let update_drop_target = (f, {drop_target, _} as model: Model.t) => {
 let update_trash = (f, {trash, _} as model: Model.t) => {
   ...model,
   trash: f(trash),
+};
+
+let update_pattern_display = (f, {pattern_display, _} as model: Model.t) => {
+  ...model,
+  pattern_display: f(pattern_display),
 };
 
 let num_words_expression = (block, cell_idx) =>
@@ -191,6 +197,15 @@ let rec apply: (Model.t, t, unit, ~schedule_action: 'a) => Model.t =
           ),
         );
         model;
+      | TogglePatternDisplay =>
+        update_pattern_display(
+          x =>
+            switch (x) {
+            | Name => Emoji
+            | Emoji => Name
+            },
+          model,
+        )
       };
     update_world(Interpreter.run_block, model);
   };

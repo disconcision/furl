@@ -60,6 +60,9 @@ let handlers = (~inject: Update.t => Event.t, model: Model.t) => [
         | op when Core.Expression.is_operator(op) =>
           switch (current_path, Path.get_word(current_path, model.world)) {
           | (_, Some(op1)) when Core.Expression.is_operator(op1) => []
+          | (_, Some(op1)) when op1 == Core.Word.empty => [
+              UpdateWord(current_path, _ => op),
+            ]
           | ([_, _, Word(Index(n, _)), ..._], _) => [
               InsertWord(current_path, n + 1, op),
               InsertWord(current_path, n + 2, Core.Word.empty),
@@ -89,7 +92,9 @@ let handlers = (~inject: Update.t => Event.t, model: Model.t) => [
                backspace an empty word after an operator, we'll delete
                the operator. */
             switch (Path.get_word(current_path, model.world)) {
-            | Some(word) when Core.Expression.is_operator(word) => []
+            | Some(word) when Core.Expression.is_operator(word) => [
+                UpdateWord(current_path, _ => Core.Word.empty),
+              ]
             | Some(word)
                 when
                   word == Core.Word.empty
@@ -120,11 +125,19 @@ let handlers = (~inject: Update.t => Event.t, model: Model.t) => [
               ]
             }
           };
-        | x => [
-            Update.UpdateFocusedWord(
-              str => str == Core.Word.empty ? x : str ++ x,
-            ),
-          ]
+        | x =>
+          switch (Path.get_word(current_path, model.world), current_path) {
+          | (Some(word), [_, _, Word(Index(n, _)), ..._])
+              // if we're on an operator, advance to next word
+              when Core.Expression.is_operator(word) => [
+              InsertWord(current_path, n + 1, x),
+            ]
+          | _ => [
+              Update.UpdateFocusedWord(
+                str => str == Core.Word.empty ? x : str ++ x,
+              ),
+            ]
+          }
         };
       } else if (! Os.is_mac^ && held(Ctrl) && !held(Alt) && !held(Meta)) {
         switch (key) {

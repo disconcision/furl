@@ -36,6 +36,11 @@ type trash_item =
 type trash = list(trash_item);
 
 [@deriving sexp]
+type pattern_display =
+  | Name
+  | Emoji;
+
+[@deriving sexp]
 type t = {
   world: Block.t,
   cell_proj,
@@ -45,6 +50,7 @@ type t = {
   carried_cell: int,
   carried_word: string,
   dragged_path: Path.t,
+  pattern_display,
 };
 
 let init_world: Block.t = [
@@ -84,4 +90,5 @@ let init = {
   dragged_path: [],
   drop_target: NoTarget,
   trash: [],
+  pattern_display: Name,
 };

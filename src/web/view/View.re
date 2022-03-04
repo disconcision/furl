@@ -105,6 +105,13 @@ let pattern_class: option(Core.Pattern.form) => string =
   | Some(Atom(_)) => "pat-singleton"
   | _ => "pat-unknown";
 
+let core_word_view: (Model.pattern_display, Core.Word.t) => t =
+  (pattern_display, word) =>
+    switch (pattern_display) {
+    | Emoji => text(Core.Word.emoji_of_default(word))
+    | Name => text(word)
+    };
+
 let set_focus = (this_path, inject, _evt) =>
   Event.(
     Many([
@@ -138,6 +145,11 @@ let exp_atom_view =
         "binder-selected",
       ]
     | _ => []
+    };
+  let word_view =
+    switch (form) {
+    | Var(_) => core_word_view(model.pattern_display, word)
+    | _ => text(word)
     };
   div(
     [
@@ -188,7 +200,7 @@ let exp_atom_view =
        }),
        */
     ],
-    [text(word)],
+    [word_view],
   );
 };
 
@@ -207,6 +219,11 @@ let pat_atom_view =
         "use-selected",
       ]
     | _ => []
+    };
+  let word_view =
+    switch (form) {
+    | Some(Var(_)) => core_word_view(model.pattern_display, word)
+    | _ => text(word)
     };
   div(
     [
@@ -228,7 +245,7 @@ let pat_atom_view =
         )
       }),
     ],
-    [text(word)],
+    [word_view],
   );
 };
 
@@ -569,7 +586,7 @@ let root_delete = (~inject, path, model: Model.t, evt) =>
     @ [delete(~inject, path, evt)],
   );
 
-let trash_teim_view = (~inject, item) => {
+let trash_item_view = (~inject, item) => {
   switch (item) {
   | Model.TrashedWord(word, (x, y)) =>
     div(
@@ -596,7 +613,7 @@ let trash_teim_view = (~inject, item) => {
 };
 
 let trash_view = (~inject, {trash, _}: Model.t) => {
-  div([Attr.class_("trash")], List.map(trash_teim_view(~inject), trash));
+  div([Attr.class_("trash")], List.map(trash_item_view(~inject), trash));
 };
 
 let trash_panel = (~inject) =>
@@ -606,6 +623,15 @@ let trash_panel = (~inject) =>
       Attr.on_click(_ => inject(Update.EmptyTrash)),
     ],
     [text("🗑️")],
+  );
+
+let cell_control_panel = (~inject) =>
+  div(
+    [
+      Attr.class_("cell-control-panel"),
+      Attr.on_click(_ => inject(Update.TogglePatternDisplay)),
+    ],
+    [text("P")],
   );
 
 let view = (~inject, {world, focus, _} as model: Model.t) => {
@@ -629,6 +655,7 @@ let view = (~inject, {world, focus, _} as model: Model.t) => {
     ],
     [
       trash_panel(~inject),
+      cell_control_panel(~inject),
       toolbar(~inject),
       title_view(model, ~inject),
       cells_view(~inject, ~model, path, cells),

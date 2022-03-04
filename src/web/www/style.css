@@ -1264,3 +1264,15 @@ body {
   transform: rotate(35deg);
   text-shadow: 9px 4px yellow;
 }
+
+.cell-control-panel {
+  position: absolute;
+  top: 0.7em;
+  left: 2.5em;
+  cursor: pointer;
+}
+
+.cell-control-panel:hover {
+  transform: rotate(35deg);
+  text-shadow: 9px 4px yellow;
+}
