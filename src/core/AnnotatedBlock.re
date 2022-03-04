@@ -41,8 +41,15 @@ type annotated_exp = {
 };
 
 [@deriving sexp]
+type status =
+  | Alive
+  | Dead;
+
+[@deriving sexp]
 type vars = {
   bound_here: option(Pattern.uses_ctx),
+  num_refs: option(int),
+  binding_status: option(status),
   used_here: Path.ctx,
   context: Path.ctx,
 };
@@ -61,6 +68,8 @@ type annotated_block = {
   path: Path.t, // always empty for now since only one block
   cells: list(annotated_cell),
 };
+
+type t = annotated_block;
 
 let annotate_word = (path, length, idx, word) => {
   {
@@ -143,6 +152,8 @@ let annotate_cell: (Path.ctx, Path.t, int, int, Cell.t) => annotated_cell =
     {
       path,
       vars: {
+        num_refs: None,
+        binding_status: None,
         bound_here: None, // Will fill in reverse pass
         used_here: get_bound_exp_vars(expression),
         context,
@@ -239,24 +250,70 @@ let get_pat_var_uses: annotated_pat => Pattern.uses_ctx =
       words,
     );
 
+let count_uses: Pattern.uses_ctx => int =
+  uses_ctx =>
+    uses_ctx
+    |> List.map(((_, x)) => List.length(x))
+    |> List.fold_left((+), 0);
+
+let init_live_ctx: list(annotated_cell) => list(Word.t) =
+  reversed_block =>
+    switch (reversed_block) {
+    | [last_cell, ..._] =>
+      List.map(
+        ({word, _}: annotated_word_pat) => word,
+        last_cell.pattern.words,
+      )
+    | _ => []
+    };
+
+let some_bound_here_in_live_ctx = (bound_here, live_ctx) =>
+  List.exists(
+    word => None != List.find_opt((==)(word), live_ctx),
+    Environment.keys(bound_here),
+  );
+
+let cell_binding_status = (bound_here, live_ctx) =>
+  some_bound_here_in_live_ctx(bound_here, live_ctx) ? Alive : Dead;
+
 let reverse_annonate_cell:
-  (Pattern.uses_ctx, annotated_cell) => (Pattern.uses_ctx, annotated_cell) =
-  (co_ctx, {pattern, expression, vars, _} as ann_cell) => {
+  (list(Word.t), Pattern.uses_ctx, annotated_cell) =>
+  (Pattern.uses_ctx, annotated_cell) =
+  (live_ctx, co_ctx, {pattern, expression, vars, _} as ann_cell) => {
     let co_ctx = gather_uses(co_ctx, expression);
     let (co_ctx, pattern) = consume_uses(co_ctx, pattern);
-    let vars = {...vars, bound_here: Some(get_pat_var_uses(pattern))};
+    let uses = get_pat_var_uses(pattern);
+    let vars = {
+      ...vars,
+      bound_here: Some(uses),
+      num_refs: Some(count_uses(uses)),
+      binding_status: Some(cell_binding_status(uses, live_ctx)),
+    };
     (co_ctx, {...ann_cell, vars, pattern});
+  };
+
+let extend_live_ctx = (live_ctx, ann_cell) =>
+  //TODO: this approach is probably bugged... need to account for shadowing,
+  // remove things from live ctx. better approach: don't just blindly append,
+  // make sure no duplicates, and the remove on encountering bindings.
+  //ALSO: composite patterns are alive as long as 1 of their sub-patterns is
+  switch (ann_cell.vars.binding_status, ann_cell.vars.used_here) {
+  | (Some(Alive), uses_ctx) => live_ctx @ Environment.keys(uses_ctx)
+  | _ => live_ctx
   };
 
 let reverse_pass: annotated_block => annotated_block =
   ({cells, path, _}) => {
-    let (new_cells, _) =
+    let rev_cells = List.rev(cells);
+    let (new_cells, _, _) =
       Base.List.fold(
-        List.rev(cells),
-        ~init=([], Environment.empty),
-        ~f=((acc_block, acc_ctx), cell) => {
-          let (uses_ctx, ann_cell) = reverse_annonate_cell(acc_ctx, cell);
-          (acc_block @ [ann_cell], uses_ctx);
+        rev_cells,
+        ~init=([], Environment.empty, init_live_ctx(rev_cells)),
+        ~f=((acc_block, acc_ctx, live_ctx), cell) => {
+          let (uses_ctx, ann_cell) =
+            reverse_annonate_cell(live_ctx, acc_ctx, cell);
+          let live_ctx = extend_live_ctx(live_ctx, ann_cell);
+          (acc_block @ [ann_cell], uses_ctx, live_ctx);
         },
       );
     {cells: List.rev(new_cells), path};

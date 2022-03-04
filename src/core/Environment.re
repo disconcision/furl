@@ -37,6 +37,8 @@ let update_or_extend = (ctx, key, f, v) => {
   };
 };
 
+let keys = ctx => List.map(((k, _)) => k, ctx);
+
 /*
 
  let map = (f, xs) => List.map(((x, _) as xa) => (x, f(xa)), xs);

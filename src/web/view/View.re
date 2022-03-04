@@ -98,7 +98,7 @@ let expression_class: Core.Expression.form => string =
   | Atom(_) => "expr-singleton"
   | App(_) => "expr-app"
   | Seq(_) => "expr-seq"
-  | Unknown => "expr-unknown";
+  | _ => "expr-unknown";
 
 let pattern_class: option(Core.Pattern.form) => string =
   fun

@@ -10,7 +10,7 @@ type atom =
 type form =
   | Atom(atom)
   //| Cons(name, list(atom))
-  | Unknown;
+  | Unknown(Word.s);
 
 [@deriving sexp]
 type uses_ctx = Environment.t_(list(Path.t));
@@ -34,7 +34,7 @@ let parse: (uses_ctx, Word.s) => form =
     print_endline(Sexplib.Sexp.to_string_hum(Word.sexp_of_s(words)));
     switch (words) {
     | [x] => Atom(parse_atom(ctx, x))
-    | _ => Unknown
+    | _ => Unknown(words)
     };
   };
 

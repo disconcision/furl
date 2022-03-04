@@ -189,11 +189,16 @@ let rec apply: (Model.t, t, unit, ~schedule_action: 'a) => Model.t =
           model,
         )
       | PrintAnnotatedBlock =>
+        let ann_block = AnnotatedBlock.mk(model.world);
         print_endline(
           Sexplib.Sexp.to_string_hum(
-            AnnotatedBlock.sexp_of_annotated_block(
-              AnnotatedBlock.mk(model.world),
-            ),
+            AnnotatedBlock.sexp_of_annotated_block(ann_block),
+          ),
+        );
+        print_endline("FURLBLOCK:");
+        print_endline(
+          Sexplib.Sexp.to_string_hum(
+            Expression.sexp_of_form(FurledBlock.furl_block(ann_block)),
           ),
         );
         model;

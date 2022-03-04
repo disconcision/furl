@@ -19,7 +19,9 @@ type form =
   | Atom(atom)
   | App(prim, list(form))
   | Seq(prim, list(form))
-  | Unknown;
+  | Unknown(Word.s)
+  | Let(list(binding), form)
+and binding = (Pattern.form, form);
 
 let prim_of_string: string => option(prim) =
   fun
@@ -60,7 +62,7 @@ let parse: (Path.ctx, Word.s) => form =
   (ctx, words) => {
     let parse_word = word => Atom(parse_atom(ctx, word));
     switch (words) {
-    | [] => Unknown
+    | [] => Unknown(words)
     | [x] => parse_word(x)
     | [x, ...xs] =>
       switch (prim_of_string(x)) {
@@ -79,7 +81,7 @@ let parse: (Path.ctx, Word.s) => form =
         | ["-", x1] => Seq(Add, List.map(parse_word, [x, "-" ++ x1]))
         | ["-", x1, "-", x2] =>
           Seq(Add, List.map(parse_word, [x, "-" ++ x1, "-" ++ x2]))
-        | _ => Unknown
+        | _ => Unknown(words)
         }
       }
     };

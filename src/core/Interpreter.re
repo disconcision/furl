@@ -23,7 +23,7 @@ let eval_atom: (Expression.atom, env) => option(int) =
 let rec eval_expression: (Expression.form, env) => option(int) =
   (form, env) => {
     switch (form) {
-    | Unknown => None
+    | Unknown(_) => None
     | Atom(a) => eval_atom(a, env)
     | App(Add, xs)
     | Seq(Add, xs) => bin_op((+), 0, env, xs)
