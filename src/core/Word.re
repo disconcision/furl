@@ -5,7 +5,7 @@ type t = string;
 [@deriving sexp]
 type s = list(t);
 
-let empty: t = "🕳️";
+let empty: t = ""; //"🕳️";
 
 let var_regex =
   Re.Str.regexp("^\\([a-zA-Z]\\|_[_a-zA-Z0-9]\\)[_a-zA-Z0-9']*$");

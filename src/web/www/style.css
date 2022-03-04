@@ -160,8 +160,8 @@ body {
 }
 
 .cell-view:hover {
-  background-color: #e5d3fc;
-  /*outline: dotted 1px #d1ccf8;*/
+  background-color: #caa2ff22;
+  outline: solid 0.2em #caa2ff22;
 }
 
 .expression-view, .pattern-view, .value-view {
@@ -173,15 +173,6 @@ body {
 
 .pattern-view {
   width: 10em;
-}
-
-.pattern-atom.focussed {
-  text-shadow: 5px 3px #00000099;
-}
-
-.pattern-atom.use-selected {
-  color: #9799f6 !important;
-  text-decoration: underline;
 }
 
 .pattern-atom.pat-atom-var.unused {
@@ -196,6 +187,10 @@ body {
   color: #f56197;
   text-shadow: 3px 2px #00fff1;
   text-decoration: underline;
+}
+.pattern-atom.pat-atom-var.use-selected {
+  color: #e4ff03 !important;
+  text-shadow: 2px 2px #140614, -2px -2px #cbc6cb;
 }
 
 .expression-view {
@@ -225,14 +220,14 @@ body {
 }
 
 .expression-atom.binder-selected {
-  color: #9799f6;
-  text-decoration: underline;
+  color: #e4ff03;
+  text-shadow: 2px 2px #140614, -2px -2px #cbc6cb;
 }
 
-.expression-atom.exp-atom-unbound, .pattern-atom.exp-atom-formless {
-  background-color: var(--main_background-color);
+.expression-atom.exp-atom-unbound, .expression-atom.exp-atom-formless {
+  background-color: var(--main_background-color) !important;
   color: #e7e2fd;
-  outline: solid 1px var(--main_background-color);
+  outline: solid 1px var(--main_background-color) !important;
 }
 
 .expression-atom.exp-atom-unbound::after, .expression-atom.exp-atom-formless::after {
@@ -265,11 +260,12 @@ body {
 */
 
 .atom.on-path, .atom.focussed {
-  outline: solid 2px #9799f6;
-  background-color: #9799f6;
-  color: #e8e2ff !important;
+  outline: solid 2px #e4ff00;
+  background-color: #e4ff00;
+  /*color: #9799f6 !important;*/
   border-radius: 0em;
-  box-shadow: 6px 3px #e4ff00;
+  box-shadow: 6px 3px #9799f6;
+  text-shadow: none !important;
   /* temp, replace with random: */
   transform: skewX(12deg) skewY(-1.4deg);
 }
@@ -281,6 +277,7 @@ body {
 .word-separator{
   color: #0000;
   border-radius: var(--base-radius);
+  cursor: cell;
 }
 
 .word-separator:only-child{
@@ -311,13 +308,14 @@ body {
 }
 
 .cell-separator:hover:first-child, .cell-separator:hover:last-child {
-  background-color: rgba(245, 245, 220, 128);
-  outline: double 0.5em rgba(245, 245, 220, 128);
+  outline: double 0.5em rgba(245 245 220 / 33%);
 }
-
 .cell-separator:hover:not(:first-child):not(:last-child) {
-  background-color: rgba(245, 245, 220, 32);
   border-radius: 0.5em;
+}
+.cell-separator:hover{ 
+  background-color: rgb(245 245 220 / 33%);
+  cursor: row-resize;
 }
 
 .toolbar {

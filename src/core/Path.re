@@ -68,7 +68,7 @@ let get_word: (t, Block.t) => option(Word.t) =
         Word(Index(word_idx, _)),
         ..._,
       ] =>
-      Some(Block.get_word(cell_idx, field, word_idx, block))
+      Block.get_word(cell_idx, field, word_idx, block)
     | _ => None
     };
 
@@ -76,7 +76,7 @@ let get_words: (t, Block.t) => option(Word.s) =
   (path, block) =>
     switch (path) {
     | [Cell(Index(cell_idx, _)), Field(field), ..._] =>
-      Some(Block.get_words(cell_idx, field, block))
+      Some(Block.get_words(cell_idx, field, block)) //TODO: opt check
     | _ => None
     };
 
@@ -158,6 +158,9 @@ let down_word_path = (block: Cell.s, path: t): t =>
 
 let prev_word = (block: Cell.s, path: t): option(Word.t) =>
   get_word(prev_word_path(block, path), block);
+
+let next_word = (block: Cell.s, path: t): option(Word.t) =>
+  get_word(next_word_path(block, path), block);
 
 let decr_word = (path: t): t =>
   switch (path) {

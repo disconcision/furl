@@ -129,7 +129,7 @@ let rec apply: (Model.t, t, unit, ~schedule_action: 'a) => Model.t =
           m,
           SetFocus(
             SingleCell([
-              Cell(Index(sep_idx, 666)),
+              Cell(Index(sep_idx, List.length(m.world))),
               Field(Expression),
               Word(Index(0, 666)),
             ]),
@@ -158,7 +158,13 @@ let rec apply: (Model.t, t, unit, ~schedule_action: 'a) => Model.t =
           m,
           switch (path) {
           | [c, f, ..._] =>
-            SetFocus(SingleCell([c, f, Word(Index(sep_idx, 666))])) //TODO
+            //TODO: cleanup
+            let k =
+              switch (Path.get_words([c, f], m.world)) {
+              | Some(ws) => List.length(ws)
+              | None => 666
+              };
+            SetFocus(SingleCell([c, f, Word(Index(sep_idx, k))]));
           | _ => SetFocus(SingleCell(path))
           },
           state,
@@ -200,6 +206,10 @@ let rec apply: (Model.t, t, unit, ~schedule_action: 'a) => Model.t =
           Sexplib.Sexp.to_string_hum(
             Expression.sexp_of_form(FurledBlock.furl_block(ann_block)),
           ),
+        );
+        print_endline("FOCUS:");
+        print_endline(
+          Sexplib.Sexp.to_string_hum(Model.sexp_of_focus(model.focus)),
         );
         model;
       | TogglePatternDisplay =>

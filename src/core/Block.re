@@ -26,6 +26,7 @@ let update_pattern: (t, int, Word.s => Word.s) => t =
 
 let get_words: (int, Cell.field, t) => Word.s =
   (cell_idx, field, block) => {
+    //TODO: opt check
     let cell = nth_cell(block, cell_idx);
     switch (field) {
     | Expression => cell.expression
@@ -34,6 +35,6 @@ let get_words: (int, Cell.field, t) => Word.s =
     };
   };
 
-let get_word: (int, Cell.field, int, t) => Word.t =
+let get_word: (int, Cell.field, int, t) => option(Word.t) =
   (cell_idx, field, word_idx, block) =>
-    List.nth(get_words(cell_idx, field, block), word_idx);
+    List.nth_opt(get_words(cell_idx, field, block), word_idx);

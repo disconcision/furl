@@ -9,6 +9,18 @@ let is_prev_word_operator = (block, path: Path.t) =>
   | _ => false
   };
 
+let is_next_word = (block, path: Path.t) =>
+  switch (Core.Path.next_word(block, path)) {
+  | Some(_) => true
+  | _ => false
+  };
+
+let is_next_word_operator = (block, path: Path.t) =>
+  switch (Core.Path.next_word(block, path)) {
+  | Some(op) when Expression.is_operator(op) => true
+  | _ => false
+  };
+
 let handlers = (~inject: Update.t => Event.t, model: Model.t) => [
   Attr.on_keypress(_evt => Event.Prevent_default),
   Attr.on_keyup(_evt => Event.Many([])),
@@ -62,6 +74,12 @@ let handlers = (~inject: Update.t => Event.t, model: Model.t) => [
           | (_, Some(op1)) when Core.Expression.is_operator(op1) => []
           | (_, Some(op1)) when op1 == Core.Word.empty => [
               UpdateWord(current_path, _ => op),
+            ]
+          | ([_, _, Word(Index(n, _)), ..._], _)
+              when
+                is_next_word(model.world, current_path)
+                && !is_next_word_operator(model.world, current_path) => [
+              InsertWord(current_path, n + 1, op),
             ]
           | ([_, _, Word(Index(n, _)), ..._], _) => [
               InsertWord(current_path, n + 1, op),
