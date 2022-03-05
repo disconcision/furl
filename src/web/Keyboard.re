@@ -142,9 +142,17 @@ let handlers = (~inject: Update.t => Event.t, model: Model.t) => [
                   Delete([Cell(Index(0, l))]),
                   SetFocus(SingleCell([])),
                 ]
-              | [Cell(Index(cell_idx, l)), ..._] => [
+              | [Cell(Index(cell_idx, l)), ..._] =>
+                //TODO: select last word of cell
+                [
                   Delete([Cell(Index(cell_idx, l))]),
-                  SetFocus(SingleCell([Cell(Index(cell_idx - 1, 666))])),
+                  SetFocus(
+                    SingleCell([
+                      Cell(
+                        Index(cell_idx - 1, List.length(model.world) - 1),
+                      ),
+                    ]),
+                  ),
                 ]
               | _ => []
               }

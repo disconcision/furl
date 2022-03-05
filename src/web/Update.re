@@ -318,6 +318,7 @@ let rec apply: (Model.t, t, unit, ~schedule_action: 'a) => Model.t =
                 model
                 |> app(Delete(path))
                 |> app(InsertWord(path, path_word_idx, carry_word))
+              | Some(_) when path_word_idx == word_idx => model
               | Some(carry_word) =>
                 if (path_word_idx > word_idx) {
                   model
