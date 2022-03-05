@@ -202,3 +202,62 @@ let decr_word = (path: t): t =>
     ]
   | _ => path
   };
+
+//let is_to_cell: t => bool = path => List.length(path) == 1;
+
+//let is_to_word: t => bool = path => List.length(path) == 3;
+
+let num_words_in_exp = (block, cell_idx) =>
+  Block.nth_cell(block, cell_idx) |> (x => x.expression) |> List.length;
+
+let is_exp_empty_word = (block, path, cell_idx) =>
+  num_words_in_exp(block, cell_idx) == 1
+  && get_word(path, block) == Some(Word.empty);
+
+let delete: (t, Block.t) => Block.t =
+  (path, block) => {
+    switch (path) {
+    | [Cell(Index(cell_idx, _)), Field(Expression), _, ..._]
+        when is_exp_empty_word(block, path, cell_idx) => block
+    | [
+        Cell(Index(cell_idx, _)),
+        Field(Expression),
+        Word(Index(word_idx, _)),
+        ..._,
+      ] =>
+      Block.update_expression(
+        block,
+        cell_idx,
+        Util.ListUtil.remove(word_idx),
+      )
+    | [Cell(Index(cell_idx, _))] => Util.ListUtil.remove(cell_idx, block)
+    | _ => block
+    };
+  };
+
+let update_word: (Word.t => Word.t, t, Block.t) => Block.t =
+  (f, path, block) =>
+    switch (path) {
+    | [
+        Cell(Index(cell_idx, _)),
+        Field(Expression),
+        Word(Index(word_idx, _)),
+        ..._,
+      ] =>
+      Block.update_expression(block, cell_idx, Cell.update_word(f, word_idx))
+    | _ => block
+    };
+
+let insert_word: (Word.t, t, int, Block.t) => Block.t =
+  (word, path, sep_idx, block) =>
+    switch (path) {
+    | [Cell(Index(cell_idx, _)), Field(Expression), ..._] =>
+      Block.update_expression(
+        block,
+        cell_idx,
+        Util.ListUtil.insert_at(sep_idx, word),
+      )
+    | _ => block
+    };
+
+let insert_cell: (int, Cell.t, Block.t) => Block.t = Util.ListUtil.insert_at;

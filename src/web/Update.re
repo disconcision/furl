@@ -3,6 +3,17 @@ open Util;
 open Core;
 
 [@deriving sexp]
+type single_focus_action =
+  | SwapCellDown
+  | SwapCellUp
+  | MoveDown
+  | MoveUp
+  | MoveRight
+  | MoveLeft
+  | InsertChar(string)
+  | Backspace;
+
+[@deriving sexp]
 type t =
   | SetFocus(Model.focus)
   | Pickup(Model.carry)
@@ -28,7 +39,8 @@ type t =
   | EmptyTrash
   | DebugPrint
   | TogglePatternDisplay
-  | UpdateKeymap(Model.keymap => Model.keymap);
+  | UpdateKeymap(Model.keymap => Model.keymap)
+  | AtSingleFocus(single_focus_action);
 
 let update_focus = (f, {focus, _} as model: Model.t) => {
   ...model,
@@ -65,18 +77,23 @@ let update_keymap = (f, {keymap, _} as model: Model.t) => {
   keymap: f(keymap),
 };
 
-let num_words_expression = (block, cell_idx) =>
-  Block.nth_cell(block, cell_idx)
-  |> ((x: Cell.t) => x.expression)
-  |> List.length;
+let is_prev_word_operator = (block, path: Path.t) =>
+  switch (Path.prev_word(block, path)) {
+  | Some(op) when Expression.is_operator(op) => true
+  | _ => false
+  };
 
-let is_only_word_empty_expression = (block, path, cell_idx) =>
-  num_words_expression(block, cell_idx) == 1
-  && Path.get_word(path, block) == Some(Word.empty);
+let is_next_word = (block, path: Path.t) =>
+  switch (Path.next_word(block, path)) {
+  | Some(_) => true
+  | _ => false
+  };
 
-let is_path_to_cell: Path.t => bool = path => List.length(path) == 1;
-
-let is_path_to_word: Path.t => bool = path => List.length(path) == 3;
+let is_next_word_operator = (block, path: Path.t) =>
+  switch (Path.next_word(block, path)) {
+  | Some(op) when Expression.is_operator(op) => true
+  | _ => false
+  };
 
 let rec apply: (Model.t, t, unit, ~schedule_action: 'a) => Model.t =
   (model: Model.t, update: t, state: State.t, ~schedule_action) => {
@@ -84,48 +101,25 @@ let rec apply: (Model.t, t, unit, ~schedule_action: 'a) => Model.t =
     let app = (a, m) => apply(m, a, state, ~schedule_action);
     let model =
       switch (update) {
-      | SetFocus(focus) =>
-        //TODO: check if previous focus is empty word, and if so delete it maybe?
-        // do we distinguish between empty words and holes?
-        update_focus(_ => focus, model)
+      | SetFocus(focus) => update_focus(_ => focus, model)
       | Pickup(thing) => update_carry(_ => thing, model)
+      | EmptyTrash => update_trash(_ => [], model)
+      | UpdateKeymap(f) => update_keymap(f, model)
+      | SetDropTarget(target) => update_drop_target(_ => target, model)
+      | SwapCells(a, b) => update_world(ListUtil.swap(a, b), model)
+      | Delete(path) => update_world(Path.delete(path), model)
+      | AtSingleFocus(a) => apply_single(a, model, state, ~schedule_action)
       | PickupTrash(idx) =>
+        //TODO: retain trash if not restored
         switch (List.nth(model.trash, idx)) {
         | TrashedWord(word, _) =>
           model
-          |> update_trash(trash => ListUtil.remove(idx, trash))
+          |> update_trash(ListUtil.remove(idx))
           |> app(Pickup(WordBrush(word)))
         | TrashedCell(cell, _) =>
           model
-          |> update_trash(trash => ListUtil.remove(idx, trash))
+          |> update_trash(ListUtil.remove(idx))
           |> app(Pickup(CellBrush(cell)))
-        }
-      | SetDropTarget(target) => update_drop_target(_ => target, model)
-      | SwapCells(a, b) =>
-        // TODO: refactored, not sure if works
-        update_world(ListUtil.swap(a, b), model)
-      | Delete(path) =>
-        switch (path) {
-        | [Cell(Index(cell_idx, _)), Field(Expression), _, ..._]
-            when is_only_word_empty_expression(model.world, path, cell_idx) => model
-        | [
-            Cell(Index(cell_idx, _)),
-            Field(Expression),
-            Word(Index(word_idx, _)),
-            ..._,
-          ] =>
-          update_world(
-            world =>
-              Block.update_expression(
-                world,
-                cell_idx,
-                ListUtil.remove(word_idx),
-              ),
-            model,
-          )
-        | [Cell(Index(cell_idx, _))] =>
-          update_world(ListUtil.remove(cell_idx), model)
-        | _ => model
         }
       | DeleteFocussed =>
         switch (model.focus) {
@@ -161,11 +155,10 @@ let rec apply: (Model.t, t, unit, ~schedule_action: 'a) => Model.t =
           |> app(DeleteCarryingSource);
         | _ => model
         }
-      | EmptyTrash => update_trash(_ => [], model)
       | InsertCell(sep_idx, cell) =>
         //TODO: index 666
         model
-        |> update_world(ListUtil.insert_at(sep_idx, cell))
+        |> update_world(Path.insert_cell(sep_idx, cell))
         |> app(
              SetFocus(
                SingleCell([
@@ -191,43 +184,26 @@ let rec apply: (Model.t, t, unit, ~schedule_action: 'a) => Model.t =
         | _ => model
         };
       | DropReorderCell(new_idx) =>
+        let block = model.world;
         (
           switch (model.carry) {
           | Cell([Cell(Index(carry_idx, _)), ..._]) when model.keymap.shift =>
-            let cell = Block.nth_cell(model.world, carry_idx);
+            let cell = Block.nth_cell(block, carry_idx);
             app(InsertCell(new_idx, cell), model);
           | Cell([Cell(Index(carry_idx, _)), ..._]) =>
-            let cell = Block.nth_cell(model.world, carry_idx);
+            let cell = Block.nth_cell(block, carry_idx);
             let new_idx = new_idx > carry_idx ? new_idx - 1 : new_idx;
             model
-            |> app(
-                 Delete([
-                   Cell(Index(carry_idx, List.length(model.world))),
-                 ]),
-               )
+            |> app(Delete([Cell(Index(carry_idx, List.length(block)))]))
             |> app(InsertCell(new_idx, cell));
           | CellBrush(cell) => app(InsertCell(new_idx, cell), model)
           | _ => model
           }
         )
-        // hack? sometimes ondragleave doesn't get triggered when dropping
-        //|> update_drop_target(_ => NoTarget)
-        |> app(Pickup(Nothing))
+        |> app(Pickup(Nothing));
       | InsertWord(path, sep_idx, new_word) =>
         let m =
-          update_world(
-            world =>
-              switch (path) {
-              | [Cell(Index(cell_idx, _)), Field(Expression), ..._] =>
-                Block.update_expression(
-                  world,
-                  cell_idx,
-                  ListUtil.insert_at(sep_idx, new_word),
-                )
-              | _ => world
-              },
-            model,
-          );
+          update_world(Path.insert_word(new_word, path, sep_idx), model);
         app(
           switch (path) {
           | [c, f, ..._] =>
@@ -286,24 +262,7 @@ let rec apply: (Model.t, t, unit, ~schedule_action: 'a) => Model.t =
         | SingleCell(path) => app(UpdateWord(path, f), model)
         }
       | UpdateWord(path, f) =>
-        update_world(
-          world =>
-            switch (path) {
-            | [
-                Cell(Index(cell_idx, _)),
-                Field(Expression),
-                Word(Index(word_idx, _)),
-                ..._,
-              ] =>
-              Block.update_expression(
-                world,
-                cell_idx,
-                Cell.update_word(f, word_idx),
-              )
-            | _ => world
-            },
-          model,
-        )
+        update_world(Path.update_word(f, path), model)
       | DropReplaceWord(path) =>
         // TODO: figure out how to combine this with dropinsertword
         switch (path) {
@@ -344,21 +303,15 @@ let rec apply: (Model.t, t, unit, ~schedule_action: 'a) => Model.t =
         }
       | DebugPrint =>
         let ann_block = AnnotatedBlock.mk(model.world);
-        print_endline(
-          Sexplib.Sexp.to_string_hum(
-            AnnotatedBlock.sexp_of_annotated_block(ann_block),
-          ),
+        Util.P.p'(
+          "ANNBLOCK",
+          AnnotatedBlock.sexp_of_annotated_block(ann_block),
         );
-        print_endline("FURLBLOCK:");
-        print_endline(
-          Sexplib.Sexp.to_string_hum(
-            Expression.sexp_of_form(FurledBlock.furl_block(ann_block)),
-          ),
+        Util.P.p'(
+          "FURLBLOCK",
+          Expression.sexp_of_form(FurledBlock.furl_block(ann_block)),
         );
-        print_endline("FOCUS:");
-        print_endline(
-          Sexplib.Sexp.to_string_hum(Model.sexp_of_focus(model.focus)),
-        );
+        Util.P.p'("FOCUS:", Model.sexp_of_focus(model.focus));
         model;
       | TogglePatternDisplay =>
         update_pattern_display(
@@ -369,9 +322,134 @@ let rec apply: (Model.t, t, unit, ~schedule_action: 'a) => Model.t =
             },
           model,
         )
-      | UpdateKeymap(f) => update_keymap(f, model)
       };
     update_world(Interpreter.run_block, model);
+  }
+
+and apply_single:
+  (single_focus_action, Model.t, unit, ~schedule_action: 'a) => Model.t =
+  (a, model, state, ~schedule_action) => {
+    let SingleCell(current_path) = model.focus;
+    let app = (a, m) => apply(m, a, state, ~schedule_action);
+    let update_focus = (f, m: Model.t) => {
+      app(SetFocus(SingleCell(f(m.world, current_path))), m);
+    };
+    switch (a) {
+    | SwapCellDown =>
+      switch (current_path) {
+      | [Cell(Index(cell_idx, k))] when cell_idx != k - 1 =>
+        model
+        |> app(ReorderCell(cell_idx + 1, cell_idx))
+        |> app(SetFocus(SingleCell([Cell(Index(cell_idx + 1, k))])))
+      | _ => model
+      }
+    | SwapCellUp =>
+      switch (current_path) {
+      | [Cell(Index(cell_idx, k))] when cell_idx != 0 =>
+        model
+        |> app(ReorderCell(cell_idx, cell_idx - 1))
+        |> app(SetFocus(SingleCell([Cell(Index(cell_idx - 1, k))])))
+      | _ => model
+      }
+    | MoveDown => update_focus(Path.down_path, model)
+    | MoveUp => update_focus(Path.up_path, model)
+    | MoveRight => update_focus(Path.next_word_path, model)
+    | MoveLeft => update_focus(Path.prev_word_path, model)
+    | InsertChar(op) when Expression.is_operator(op) =>
+      switch (current_path, Path.get_word(current_path, model.world)) {
+      | (_, Some(op1)) when Expression.is_operator(op1) => model
+      | (_, Some(op1)) when op1 == Word.empty =>
+        app(UpdateWord(current_path, _ => op), model)
+      | ([_, _, Word(Index(n, _)), ..._], _)
+          when
+            is_next_word(model.world, current_path)
+            && !is_next_word_operator(model.world, current_path) =>
+        app(InsertWord(current_path, n + 1, op), model)
+
+      | ([_, _, Word(Index(n, _)), ..._], _) =>
+        model
+        |> app(InsertWord(current_path, n + 1, op))
+        |> app(InsertNewWord(current_path, n + 2))
+      | _ => model
+      }
+    | InsertChar(x) =>
+      let SingleCell(current_path) = model.focus;
+      switch (Path.get_word(current_path, model.world), current_path) {
+      | (Some(word), [_, _, Word(Index(n, _)), ..._])
+          // if we're on an operator, advance to next word
+          when Expression.is_operator(word) =>
+        app(InsertWord(current_path, n + 1, x), model)
+      | _ => app(UpdateFocusedWord(w => w == Word.empty ? x : w ++ x), model)
+      };
+    | Backspace =>
+      let remove_char = str => String.sub(str, 0, String.length(str) - 1);
+      let words = Path.get_words(current_path, model.world);
+      switch (current_path) {
+      | [Cell(Index(i, k))] =>
+        let new_path = [Path.Cell(Index(i, k)), Field(Expression)];
+        let length = Path.get_num_words(new_path, model.world);
+        app(
+          SetFocus(
+            SingleCell(new_path @ [Word(Index(length - 1, length))]),
+          ),
+          model,
+        );
+      | _ =>
+        switch (words) {
+        | Some([x]) when x == Word.empty =>
+          // if only empty word, delete cell
+          switch (current_path) {
+          | [Cell(Index(0, l)), ..._] =>
+            model
+            |> app(Delete([Cell(Index(0, l))]))
+            |> app(SetFocus(SingleCell([])))
+          | [Cell(Index(cell_idx, l)), ..._] =>
+            //TODO: select last word of cell
+            let new_path: Path.t = [
+              Cell(Index(cell_idx - 1, List.length(model.world) - 1)),
+            ];
+            model
+            |> app(Delete([Cell(Index(cell_idx, l))]))
+            |> app(SetFocus(SingleCell(new_path)));
+          | _ => model
+          }
+        | _ =>
+          /* Operators cannot be directly backspaced; if we try to
+             backspace an empty word after an operator, we'll delete
+             the operator. */
+          switch (Path.get_word(current_path, model.world)) {
+          | Some(word) when Expression.is_operator(word) =>
+            app(UpdateWord(current_path, _ => Word.empty), model)
+          | Some(word)
+              when
+                word == Word.empty
+                && is_prev_word_operator(model.world, current_path) =>
+            model
+            |> app(DeleteFocussed)
+            |> app(SetFocus(SingleCell(Path.decr_word(current_path))))
+            |> app(DeleteFocussed)
+            |> app(
+                 SetFocus(
+                   SingleCell(
+                     current_path |> Path.decr_word |> Path.decr_word,
+                   ),
+                 ),
+               )
+          | Some(word) when word == Word.empty =>
+            model
+            |> app(DeleteFocussed)
+            |> app(SetFocus(SingleCell(Path.decr_word(current_path))))
+          | _ =>
+            app(
+              UpdateFocusedWord(
+                w => String.length(w) == 1 ? Word.empty : remove_char(w),
+              ),
+              model,
+            )
+          }
+        }
+      };
+    };
   };
 
 //IDEA: dragging on numbers changes instead of moves?
