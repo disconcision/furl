@@ -18,28 +18,29 @@ type t =
   | SetFocus(Model.focus)
   | Pickup(Model.carry)
   | PickupTrash(int)
+  | UpdateWord(Path.t, Word.t => Word.t)
   | InsertWord(Path.t, Model.sep_id, Word.t)
   | InsertNewWord(Path.t, Model.sep_id)
-  | InsertNewWordAfterFocus
-  | UpdateWord(Path.t, Word.t => Word.t)
   | DropReplaceWord(Path.t)
-  | UpdateFocusedWord(Word.t => Word.t)
   | SetDropTarget(Model.drop_target)
   | DropInsertWord(Path.t, Model.sep_id)
   | InsertCell(Block.cell_id, Cell.t)
   | InsertNewCell(Block.cell_id)
-  | InsertNewCellAfterFocus
   | ReorderCell(Block.cell_id, int)
   | DropReorderCell(int)
   | SwapCells(Block.cell_id, Block.cell_id)
   | Delete(Path.t)
-  | DeleteFocussed
   | DeleteCarryingSource
   | AddCarryToTrash((int, int))
   | EmptyTrash
   | DebugPrint
   | TogglePatternDisplay
   | UpdateKeymap(Model.keymap => Model.keymap)
+  //TODO: move below to single_focus_action
+  | UpdateFocusedWord(Word.t => Word.t)
+  | DeleteFocussed
+  | InsertNewWordAfterFocus
+  | InsertNewCellAfterFocus
   | AtSingleFocus(single_focus_action);
 
 let update_focus = (f, {focus, _} as model: Model.t) => {
@@ -331,7 +332,7 @@ and apply_single:
   (a, model, state, ~schedule_action) => {
     let SingleCell(current_path) = model.focus;
     let app = (a, m) => apply(m, a, state, ~schedule_action);
-    let update_focus = (f, m: Model.t) => {
+    let update_focus = (f: (Block.t, Path.t) => Path.t, m: Model.t) => {
       app(SetFocus(SingleCell(f(m.world, current_path))), m);
     };
     switch (a) {
