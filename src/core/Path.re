@@ -105,6 +105,16 @@ let prev_word_path = (block: Cell.s, path: t): t =>
     let pat_path = [c, Field(Pattern)];
     let length = get_num_words(pat_path, block);
     [c, Field(Pattern), Word(Index(length - 1, length)), ...ps];
+  /*
+   | [Cell(Index(i, k)), Field(Pattern), Word(Index(0, _)), ..._]
+       when i > 0 => [
+       Cell(Index(i - 1, k)),
+     ]
+   | [Cell(Index(i, k))] =>
+     let new_path = [Cell(Index(i, k)), Field(Expression)];
+     let length = get_num_words(new_path, block);
+     new_path @ [Word(Index(length - 1, length))];
+   */
   | [Cell(Index(i, k)), Field(Pattern), Word(Index(0, _)), ...ps]
       when i != 0 =>
     let prev_exp_path = [Cell(Index(i - 1, k)), Field(Expression)];
@@ -130,6 +140,16 @@ let next_word_path = (block: Cell.s, path: t): t =>
     let exp_path = [c, Field(Expression)];
     let length = get_num_words(exp_path, block);
     [c, Field(Expression), Word(Index(0, length)), ...ps];
+  /*
+   | [Cell(Index(i, k)), Field(Expression), Word(Index(wn, wk)), ..._]
+       when i + 1 < k && wn + 1 == wk => [
+       Cell(Index(i + 1, k)),
+     ]
+   | [Cell(Index(i, k))] =>
+     let new_path = [Cell(Index(i, k)), Field(Pattern)];
+     let length = get_num_words(new_path, block);
+     new_path @ [Word(Index(0, length))];
+     */
   | [Cell(Index(i, k)), Field(Expression), Word(Index(_n, _k)), ...ps]
       when i + 1 < k =>
     let next_pat_path = [Cell(Index(i + 1, k)), Field(Pattern)];
@@ -143,7 +163,7 @@ let next_word_path = (block: Cell.s, path: t): t =>
   | _ => path
   };
 
-let up_word_path = (block: Cell.s, path: t): t =>
+let up_path = (block: Cell.s, path: t): t =>
   switch (path) {
   | [Cell(Index(n, k))] when n != 0 => [Cell(Index(n - 1, k))]
   | [Cell(Index(i, k)), f, Word(Index(n, _k)), ...ps] when i != 0 =>
@@ -154,7 +174,7 @@ let up_word_path = (block: Cell.s, path: t): t =>
   | _ => path
   };
 
-let down_word_path = (block: Cell.s, path: t): t =>
+let down_path = (block: Cell.s, path: t): t =>
   switch (path) {
   | [Cell(Index(n, k))] when n + 1 < k => [Cell(Index(n + 1, k))]
   | [Cell(Index(i, k)), f, Word(Index(n, _k)), ...ps] when i + 1 < k =>

@@ -93,10 +93,14 @@ let handlers = (~inject: Update.t => Event.t, model: Model.t) => [
           };
         | "ArrowRight" => update_focus(Core.Path.next_word_path)
         | "ArrowLeft" => update_focus(Core.Path.prev_word_path)
-        | "ArrowUp" => update_focus(Core.Path.up_word_path)
-        | "ArrowDown" => update_focus(Core.Path.down_word_path)
+        | "ArrowUp" => update_focus(Core.Path.up_path)
+        | "ArrowDown" => update_focus(Core.Path.down_path)
         | "Enter" => [InsertNewCellAfterFocus]
-        | " " => [InsertNewWordAfterFocus]
+        | " " =>
+          switch (model.world) {
+          | [] => [InsertNewCell(0)]
+          | _ => [InsertNewWordAfterFocus]
+          }
         | op when Core.Expression.is_operator(op) =>
           let SingleCell(current_path) = model.focus;
           switch (current_path, Path.get_word(current_path, model.world)) {
@@ -120,57 +124,69 @@ let handlers = (~inject: Update.t => Event.t, model: Model.t) => [
         | "Backspace" =>
           let SingleCell(current_path) = model.focus;
           let words = Path.get_words(current_path, model.world);
-          //TODO: if cell selected, select last word
-          switch (words) {
-          | Some([x]) when x == Core.Word.empty =>
-            // if only empty word, delete cell
-            switch (current_path) {
-            | [Cell(Index(0, l)), ..._] => [
-                Delete([Cell(Index(0, l))]),
-                SetFocus(SingleCell([Cell(Index(0, 666))])),
-              ]
-            | [Cell(Index(cell_idx, l)), ..._] => [
-                Delete([Cell(Index(cell_idx, l))]),
-                SetFocus(SingleCell([Cell(Index(cell_idx - 1, 666))])),
-              ]
-            | _ => []
-            }
+          switch (current_path) {
+          | [Cell(Index(i, k))] =>
+            let new_path = [Path.Cell(Index(i, k)), Field(Expression)];
+            let length = Path.get_num_words(new_path, model.world);
+            [
+              SetFocus(
+                SingleCell(new_path @ [Word(Index(length - 1, length))]),
+              ),
+            ];
           | _ =>
-            /* Operators cannot be directly backspaced; if we try to
-               backspace an empty word after an operator, we'll delete
-               the operator. */
-            switch (Path.get_word(current_path, model.world)) {
-            | Some(word) when Core.Expression.is_operator(word) => [
-                UpdateWord(current_path, _ => Core.Word.empty),
-              ]
-            | Some(word)
-                when
-                  word == Core.Word.empty
-                  && is_prev_word_operator(model.world, current_path) => [
-                Update.DeleteFocussed,
-                Update.SetFocus(
-                  SingleCell(Core.Path.decr_word(current_path)),
-                ),
-                Update.DeleteFocussed,
-                Update.SetFocus(
-                  SingleCell(
-                    current_path |> Core.Path.decr_word |> Core.Path.decr_word,
+            switch (words) {
+            | Some([x]) when x == Core.Word.empty =>
+              // if only empty word, delete cell
+              switch (current_path) {
+              | [Cell(Index(0, l)), ..._] => [
+                  Delete([Cell(Index(0, l))]),
+                  SetFocus(SingleCell([])),
+                ]
+              | [Cell(Index(cell_idx, l)), ..._] => [
+                  Delete([Cell(Index(cell_idx, l))]),
+                  SetFocus(SingleCell([Cell(Index(cell_idx - 1, 666))])),
+                ]
+              | _ => []
+              }
+            | _ =>
+              /* Operators cannot be directly backspaced; if we try to
+                 backspace an empty word after an operator, we'll delete
+                 the operator. */
+              switch (Path.get_word(current_path, model.world)) {
+              | Some(word) when Core.Expression.is_operator(word) => [
+                  UpdateWord(current_path, _ => Core.Word.empty),
+                ]
+              | Some(word)
+                  when
+                    word == Core.Word.empty
+                    && is_prev_word_operator(model.world, current_path) => [
+                  Update.DeleteFocussed,
+                  Update.SetFocus(
+                    SingleCell(Core.Path.decr_word(current_path)),
                   ),
-                ),
-              ]
-            | Some(word) when word == Core.Word.empty => [
-                Update.DeleteFocussed,
-                Update.SetFocus(
-                  SingleCell(Core.Path.decr_word(current_path)),
-                ),
-              ]
-            | _ => [
-                Update.UpdateFocusedWord(
-                  str =>
-                    String.length(str) == 1
-                      ? Core.Word.empty : remove_char(str),
-                ),
-              ]
+                  Update.DeleteFocussed,
+                  Update.SetFocus(
+                    SingleCell(
+                      current_path
+                      |> Core.Path.decr_word
+                      |> Core.Path.decr_word,
+                    ),
+                  ),
+                ]
+              | Some(word) when word == Core.Word.empty => [
+                  Update.DeleteFocussed,
+                  Update.SetFocus(
+                    SingleCell(Core.Path.decr_word(current_path)),
+                  ),
+                ]
+              | _ => [
+                  Update.UpdateFocusedWord(
+                    str =>
+                      String.length(str) == 1
+                        ? Core.Word.empty : remove_char(str),
+                  ),
+                ]
+              }
             }
           };
         | x =>
