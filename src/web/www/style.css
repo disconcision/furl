@@ -288,18 +288,18 @@ body {
 }
 
 .word-separator:only-child{
-  width: 8em;
+  width: 14em;
 }
 
 .word-separator:last-child{
   position: absolute;
-  right: -2.5em;
-  width: 2.5em;
+  right: -2em;
+  width: 2em;
 }
 .word-separator:first-child{
   position: absolute;
-  left: -2.5em;
-  width: 2.5em;
+  left: -2em;
+  width: 2em;
 }
 
 .word-separator:hover{

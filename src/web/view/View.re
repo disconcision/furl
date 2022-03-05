@@ -107,7 +107,7 @@ let exp_atom_view =
       Attr.create("draggable", "true"),
       Attr.on("dragstart", _ => stop(inject(Pickup(Word(this_path))))),
       Attr.on("dragenter", _ =>
-        prevent(inject(SetDropTarget(this_target)))
+        stop(prevent(inject(SetDropTarget(this_target))))
       ),
       Attr.on("dragend", _ => inject(SetDropTarget(NoTarget))),
       Attr.on("drop", _ => stop(inject(DropReplaceWord(this_path)))),

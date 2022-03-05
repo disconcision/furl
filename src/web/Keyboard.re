@@ -73,6 +73,24 @@ let handlers = (~inject: Update.t => Event.t, model: Model.t) => [
         | "Shift" =>
           print_endline("SHIFT DOWN");
           [UpdateKeymap(km => {...km, shift: true})];
+        | "ArrowDown" when model.keymap.shift =>
+          let SingleCell(current_path) = model.focus;
+          switch (current_path) {
+          | [Cell(Index(cell_idx, k))] when cell_idx != k - 1 => [
+              ReorderCell(cell_idx + 1, cell_idx),
+              SetFocus(SingleCell([Cell(Index(cell_idx + 1, k))])),
+            ]
+          | _ => []
+          };
+        | "ArrowUp" when model.keymap.shift =>
+          let SingleCell(current_path) = model.focus;
+          switch (current_path) {
+          | [Cell(Index(cell_idx, k))] when cell_idx != 0 => [
+              ReorderCell(cell_idx, cell_idx - 1),
+              SetFocus(SingleCell([Cell(Index(cell_idx - 1, k))])),
+            ]
+          | _ => []
+          };
         | "ArrowRight" => update_focus(Core.Path.next_word_path)
         | "ArrowLeft" => update_focus(Core.Path.prev_word_path)
         | "ArrowUp" => update_focus(Core.Path.up_word_path)

@@ -145,6 +145,7 @@ let next_word_path = (block: Cell.s, path: t): t =>
 
 let up_word_path = (block: Cell.s, path: t): t =>
   switch (path) {
+  | [Cell(Index(n, k))] when n != 0 => [Cell(Index(n - 1, k))]
   | [Cell(Index(i, k)), f, Word(Index(n, _k)), ...ps] when i != 0 =>
     let up_f_path = [Cell(Index(i - 1, k)), f];
     let length = get_num_words(up_f_path, block);
@@ -155,6 +156,7 @@ let up_word_path = (block: Cell.s, path: t): t =>
 
 let down_word_path = (block: Cell.s, path: t): t =>
   switch (path) {
+  | [Cell(Index(n, k))] when n + 1 < k => [Cell(Index(n + 1, k))]
   | [Cell(Index(i, k)), f, Word(Index(n, _k)), ...ps] when i + 1 < k =>
     let down_f_path = [Cell(Index(i + 1, k)), f];
     let length = get_num_words(down_f_path, block);
