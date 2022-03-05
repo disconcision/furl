@@ -1,67 +1,7 @@
+open Update;
+open ViewUtil;
 open Virtual_dom.Vdom;
 open Virtual_dom.Vdom.Node;
-
-module Js = Js_of_ocaml.Js;
-module Dom = Js_of_ocaml.Dom;
-module Dom_html = Js_of_ocaml.Dom_html;
-
-let hash_of_string = str =>
-  List.fold_left(
-    (acc, c) => acc + int_of_char(c),
-    0,
-    List.of_seq(String.to_seq(str)),
-  );
-
-let random_offset = (~bound_x=5, ~bound_y=8, seed_str) => {
-  Random.init(hash_of_string(seed_str));
-  let (x, y) = (
-    Random.int(bound_x) - bound_x / 2,
-    Random.int(bound_y) - bound_y / 2,
-  );
-  Attr.string_property(
-    "style",
-    "position: relative; left: "
-    ++ string_of_int(x)
-    ++ "px; top: "
-    ++ string_of_int(y)
-    ++ "px;",
-  );
-};
-
-let random_skew = (~bound_x=32, ~bound_y=1.2, seed_str) => {
-  Random.init(hash_of_string(seed_str));
-  let (x, y) = (
-    Random.int(bound_x) - bound_x / 2,
-    Random.float(bound_y) -. bound_y /. 2.,
-  );
-  Attr.string_property(
-    "style",
-    Printf.sprintf("transform: SkewY(%fdeg) SkewX(%ddeg);", y, x),
-  );
-};
-
-/*
- Attr.on("dragover", evt => {
-          let container_rect =
-            JsUtil.get_elem_by_id("root")##getBoundingClientRect;
-          let (target_x, target_y) = (
-            float_of_int(evt##.clientX),
-            float_of_int(evt##.clientY),
-          );
-          let blee =
-            Float.to_int(Float.round(target_y -. container_rect##.top) /. 30.);
-          let blah =
-            Float.to_int(
-              Float.round(target_x -. container_rect##.left) /. 30.,
-            );
-          print_endline(string_of_int(evt##.clientX));
-          print_endline(string_of_int(evt##.clientY));
-          print_endline(string_of_int(blee));
-          print_endline(string_of_int(blah));
-          Event.Prevent_default;
-        })
- */
-let divc = (cls, contents) => div([Attr.class_(cls)], contents);
 
 let atom_focus_class: option(Core.Path.t) => string =
   path =>
@@ -113,12 +53,7 @@ let core_word_view: (Model.pattern_display, Core.Word.t) => t =
     };
 
 let set_focus = (this_path, inject, _evt) =>
-  Event.(
-    Many([
-      Stop_propagation,
-      inject(Update.SetFocus(SingleCell(this_path))),
-    ])
-  );
+  stop(inject(SetFocus(SingleCell(this_path))));
 
 let exp_atom_view =
     (
@@ -128,16 +63,20 @@ let exp_atom_view =
       ~model: Model.t,
     )
     : t => {
-  /*
-   let this_drop_target: Model.drop_target =
-     switch (this_path) {
-     | [Cell(Index(cell_idx, _)), Field(f), Word(Index(idx, _)), ..._] =>
-       WordSeparator((cell_idx, f, idx))
-     | _ => NoTarget
-     };
-   let is_drop_target =
-     model.drop_target != NoTarget && model.drop_target == this_drop_target;
-     */
+  let this_target: Model.drop_target =
+    switch (this_path) {
+    | [Cell(Index(cell_idx, _)), Field(f), Word(Index(word_idx, _)), ..._] =>
+      Word((cell_idx, f, word_idx))
+    | _ => NoTarget
+    };
+  let is_drop_target =
+    switch (model.carry) {
+    | Word(_)
+    | WordBrush(_)
+        when model.drop_target != NoTarget && model.drop_target == this_target =>
+      true
+    | _ => false
+    };
   let binding_highlight_class =
     switch (form, model.focus) {
     | (Var(_, binding_path), SingleCell(focussed_path))
@@ -159,46 +98,19 @@ let exp_atom_view =
           "atom",
           "expression-atom",
           exp_atom_class(form),
-          atom_focus_class(path) /*@ (is_drop_target ? ["active-drop-target"] : [])*/,
+          atom_focus_class(path),
         ]
-        @ binding_highlight_class,
+        @ binding_highlight_class
+        @ (is_drop_target ? ["active-drop-target"] : []),
       ),
       Attr.on_click(set_focus(this_path, inject)),
       Attr.create("draggable", "true"),
-      Attr.on("dragstart", _evt => {
-        Event.(
-          Many([
-            Stop_propagation,
-            inject(Update.SetDraggedPath(this_path)),
-            inject(Update.PickupWord(word)),
-          ])
-        )
-      }),
-      Attr.on("drop", _evt =>
-        Event.(
-          Many([
-            Stop_propagation,
-            inject(
-              Update.UpdateWord(
-                this_path,
-                //_word => model.carried_word,
-                word => word == Core.Word.empty ? model.carried_word : word,
-              ),
-            ),
-          ])
-        )
+      Attr.on("dragstart", _ => stop(inject(Pickup(Word(this_path))))),
+      Attr.on("dragenter", _ =>
+        prevent(inject(SetDropTarget(this_target)))
       ),
-      /*
-       Attr.on("dragenter", _evt => {
-         Event.Many([
-           Event.Prevent_default,
-           inject(SetDropTarget(this_drop_target)),
-         ])
-       }),
-       Attr.on("dragleave", _evt => {
-         Event.Many([Event.Prevent_default, inject(SetDropTarget(NoTarget))])
-       }),
-       */
+      Attr.on("dragend", _ => inject(SetDropTarget(NoTarget))),
+      Attr.on("drop", _ => stop(inject(DropReplaceWord(this_path)))),
     ],
     [word_view],
   );
@@ -235,15 +147,7 @@ let pat_atom_view =
       ),
       Attr.on_click(set_focus(this_path, inject)),
       Attr.create("draggable", "true"),
-      Attr.on("dragstart", _evt => {
-        Event.(
-          Many([
-            Stop_propagation,
-            inject(Update.SetDraggedPath(this_path)),
-            inject(Update.PickupWord(word)),
-          ])
-        )
-      }),
+      Attr.on("dragstart", _ => stop(inject(Pickup(Word(this_path))))),
     ],
     [word_view],
   );
@@ -311,43 +215,28 @@ let value_view =
   );
 };
 
-let cell_sep_view = (~inject, {drop_target, _} as model: Model.t, cell_idx) => {
-  //TODO: add to model equiv of drop_target for currently dragged thing,
-  // so we can make it that can only drop on sort-appropriate targets
-  let this_drop_target: Model.drop_target = CellSepatator(cell_idx);
+let cell_sep_view =
+    (~inject, {drop_target, carry, _} as _model: Model.t, cell_idx) => {
+  let this_target: Model.drop_target = CellSepatator(cell_idx);
   let is_drop_target =
-    drop_target != NoTarget && drop_target == this_drop_target;
+    switch (carry) {
+    | Cell(_)
+    | CellBrush(_) when drop_target != NoTarget && drop_target == this_target =>
+      true
+    | _ => false
+    };
   div(
     [
       Attr.classes(
         ["cell-separator"] @ (is_drop_target ? ["active-drop-target"] : []),
       ),
-      Attr.on_click(_evt =>
-        Event.(
-          Many([
-            Stop_propagation,
-            inject(Update.InsertCell(cell_idx, Core.Cell.init())),
-          ])
-        )
+      Attr.on_click(_ => stop(inject(InsertNewCell(cell_idx)))),
+      Attr.on("drop", _ => stop(inject(DropReorderCell(cell_idx)))),
+      Attr.on("dragover", _ => {Event.Prevent_default}),
+      Attr.on("dragenter", _ =>
+        prevent(inject(SetDropTarget(this_target)))
       ),
-      Attr.on("drop", _evt =>
-        Event.(
-          Many([
-            Stop_propagation,
-            inject(Update.ReorderCell(model.carried_cell, cell_idx)),
-          ])
-        )
-      ),
-      Attr.on("dragover", _evt => {Event.Prevent_default}),
-      Attr.on("dragenter", _evt => {
-        Event.Many([
-          Event.Prevent_default,
-          inject(SetDropTarget(CellSepatator(cell_idx))),
-        ])
-      }),
-      Attr.on("dragleave", _evt => {
-        Event.Many([Event.Prevent_default, inject(SetDropTarget(NoTarget))])
-      }),
+      //Attr.on("dragleave", _evt => inject(SetDropTarget(NoTarget))),
     ],
     [text("")],
   );
@@ -356,55 +245,35 @@ let cell_sep_view = (~inject, {drop_target, _} as model: Model.t, cell_idx) => {
 let word_sep_view =
     (
       inject,
-      expression_path: Core.Path.t,
-      {drop_target, _} as model: Model.t,
+      exp_path: Core.Path.t,
+      {drop_target, carry, _} as _model: Model.t,
       idx,
     ) => {
-  let this_drop_target: Model.drop_target =
-    switch (expression_path) {
+  let this_target: Model.drop_target =
+    switch (exp_path) {
     | [Cell(Index(cell_idx, _)), Field(f), ..._] =>
       WordSeparator((cell_idx, f, idx))
     | _ => NoTarget
     };
   let is_drop_target =
-    drop_target != NoTarget && drop_target == this_drop_target;
+    switch (carry) {
+    | Word(_)
+    | WordBrush(_) when drop_target != NoTarget && drop_target == this_target =>
+      true
+    | _ => false
+    };
   div(
     [
       Attr.classes(
         ["word-separator"] @ (is_drop_target ? ["active-drop-target"] : []),
       ),
-      Attr.on_click(_evt =>
-        Event.(
-          Many([
-            Stop_propagation,
-            inject(Update.InsertWord(expression_path, idx, Core.Word.empty)),
-          ])
-        )
+      Attr.on_click(_ => stop(inject(InsertNewWord(exp_path, idx)))),
+      Attr.on("drop", _ => stop(inject(DropInsertWord(exp_path, idx)))),
+      Attr.on("dragover", _ => Event.Prevent_default),
+      Attr.on("dragenter", _ =>
+        prevent(inject(SetDropTarget(this_target)))
       ),
-      Attr.on("drop", _evt =>
-        Event.(
-          Many([
-            Stop_propagation,
-            inject(
-              Update.InsertWord(expression_path, idx, model.carried_word),
-            ),
-            // need to be more careful with paths if want to delete (case where same cell)
-            // if delete before insert, then its fine if you're moving word left.
-            // but if moving right, need to decrement insert idx
-            //inject(Update.Delete(model.dragged_path)),
-          ])
-        )
-      ),
-      Attr.on("dragover", _evt => {Event.Prevent_default}),
-      Attr.on("dragenter", _evt => {
-        Event.Many([
-          Event.Prevent_default,
-          inject(SetDropTarget(this_drop_target)),
-        ])
-      }),
-      Attr.on("dragleave", _evt => {
-        Event.Many([Event.Prevent_default, inject(SetDropTarget(NoTarget))])
-      }),
+      //Attr.on("dragleave", _evt => inject(SetDropTarget(NoTarget))),
     ],
     [text("·")],
   );
@@ -477,24 +346,8 @@ let cell_view =
       Attr.classes(["cell-view", cell_class]),
       Attr.on_click(set_focus(this_path, inject)),
       Attr.create("draggable", "true"),
-      Attr.on("dragstart", _evt =>
-        Event.(
-          Many([
-            inject(Update.SetDraggedPath(this_path)),
-            inject(Update.PickupCell(idx)),
-          ])
-        )
-      ),
-      /*
-       Attr.on("drop", _evt =>
-         Event.(
-           Many([
-             Stop_propagation,
-             inject(Update.SwapCells(idx, model.carried_cell)),
-           ])
-         )
-       ),
-       */
+      Attr.on("dragstart", _ => stop(inject(Pickup(Cell(this_path))))),
+      Attr.on("dragend", _ => inject(SetDropTarget(NoTarget))),
       Attr.on("dragover", _evt => {Event.Prevent_default}),
       Attr.on("dragenter", _evt => {Event.Prevent_default}),
     ],
@@ -506,14 +359,10 @@ let cell_view =
   );
 };
 
-let delete = (~inject, path, _evt) =>
-  Event.(Many([Stop_propagation, inject(Update.Delete(path))]));
-
-let title_view = ({dragged_path, _}: Model.t, ~inject) =>
+let title_view = (_model: Model.t, ~inject as _) =>
   div(
     [
       Attr.class_("title"),
-      Attr.on("drop", delete(~inject, dragged_path)),
       Attr.on("dragover", _evt => {Event.Prevent_default}),
       Attr.on("dragenter", _evt => {Event.Prevent_default}),
     ],
@@ -530,7 +379,7 @@ let cells_view = (~inject, ~model, path: Core.Path.t, cells) => {
     switch (path) {
     | [] => None
     | [Cell(Index(idx, _)), ...subpath] => i == idx ? Some(subpath) : None
-    | _ => failwith("Keyboard.view impossible")
+    | _ => failwith("View.cells_view impossible")
     };
   let cell_views =
     List.mapi(
@@ -541,7 +390,10 @@ let cells_view = (~inject, ~model, path: Core.Path.t, cells) => {
   let sep_views =
     List.init(List.length(cell_views) + 1, cell_sep_view(~inject, model));
   let views = Util.ListUtil.interleave(sep_views, cell_views);
-  div([Attr.class_("cells-view")], views);
+  div(
+    [Attr.class_("cells-view"), Attr.on("drop", _ => stop(Event.Ignore))],
+    views,
+  );
 };
 
 let tool_atom_view = (~inject, word): t => {
@@ -550,15 +402,10 @@ let tool_atom_view = (~inject, word): t => {
       random_offset(word),
       Attr.classes(["atom", "toolbar-atom"]),
       Attr.create("draggable", "true"),
-      Attr.on("dragstart", _evt => {
-        Event.(
-          Many([
-            Stop_propagation,
-            inject(Update.SetDraggedPath([])),
-            inject(Update.PickupWord(word)),
-          ])
-        )
-      }),
+      Attr.on_mousedown(_ => Event.(Many([Stop_propagation]))),
+      Attr.on_click(_ => stop(inject(UpdateFocusedWord(_ => word)))),
+      Attr.on("dragstart", _ => stop(inject(Pickup(WordBrush(word))))),
+      Attr.on("dragend", _ => inject(SetDropTarget(NoTarget))),
     ],
     [text(word)],
   );
@@ -569,58 +416,42 @@ let toolbar = (~inject): t =>
     [Attr.class_("toolbar")],
     List.map(
       tool_atom_view(~inject),
-      ["fact", "add", "mult", "+", "*", "0", "1", "1337"],
+      ["fact", "sum", "prod", "+", "*", "0", "1", "1337"],
     ),
   );
 
-let root_delete = (~inject, path, model: Model.t, evt) =>
-  Event.Many(
-    switch (Core.Path.get_word(path, model.world)) {
-    | None => []
-    | Some(word) => [
-        inject(Update.AddWordToTrash(word, (evt##.clientX, evt##.clientY))),
-      ]
-    },
-    //TODO: restore delete
-    //@ [delete(~inject, path, evt)],
+let trash_item_view = (~inject, trash_idx, item) => {
+  let (item_view, x, y) =
+    switch (item) {
+    | Model.TrashedWord(word, (x, y)) => (text(word), x, y)
+    | Model.TrashedCell(cell, (x, y)) =>
+      switch (cell.pattern) {
+      | [w, ..._] => (text(w ++ "..."), x, y)
+      | _ => (text("lol"), x, y)
+      }
+    };
+  div(
+    [
+      Attr.class_("trash-item"),
+      Attr.create("draggable", "true"),
+      Attr.on("dragstart", _ => stop(inject(PickupTrash(trash_idx)))),
+      Attr.on("dragend", _ => inject(SetDropTarget(NoTarget))),
+      Attr.string_property(
+        "style",
+        Printf.sprintf("position: absolute; top:%dpx; left: %dpx;", y, x),
+      ),
+    ],
+    [item_view],
   );
-
-let trash_item_view = (~inject, item) => {
-  switch (item) {
-  | Model.TrashedWord(word, (x, y)) =>
-    div(
-      [
-        Attr.class_("trash-item"),
-        Attr.create("draggable", "true"),
-        Attr.on("dragstart", _evt => {
-          Event.(
-            Many([
-              Stop_propagation,
-              inject(Update.SetDraggedPath([])),
-              inject(Update.PickupWord(word)),
-            ])
-          )
-        }),
-        Attr.string_property(
-          "style",
-          Printf.sprintf("position: absolute; top:%dpx; left: %dpx;", y, x),
-        ),
-      ],
-      [text(word)],
-    )
-  };
 };
 
 let trash_view = (~inject, {trash, _}: Model.t) => {
-  div([Attr.class_("trash")], List.map(trash_item_view(~inject), trash));
+  div([Attr.class_("trash")], List.mapi(trash_item_view(~inject), trash));
 };
 
 let trash_panel = (~inject) =>
   div(
-    [
-      Attr.class_("trash-panel"),
-      Attr.on_click(_ => inject(Update.EmptyTrash)),
-    ],
+    [Attr.class_("trash-panel"), Attr.on_click(_ => inject(EmptyTrash))],
     [text("🗑️")],
   );
 
@@ -628,13 +459,13 @@ let cell_control_panel = (~inject) =>
   div(
     [
       Attr.class_("cell-control-panel"),
-      Attr.on_click(_ => inject(Update.TogglePatternDisplay)),
+      Attr.on_click(_ => inject(TogglePatternDisplay)),
     ],
     [text("P")],
   );
 
 let view = (~inject, {world, focus, _} as model: Model.t) => {
-  let {path: _this_path, cells}: Core.AnnotatedBlock.annotated_block =
+  let {cells, _}: Core.AnnotatedBlock.annotated_block =
     Core.AnnotatedBlock.mk(world);
   let SingleCell(path) = focus;
   let block_class =
@@ -642,14 +473,17 @@ let view = (~inject, {world, focus, _} as model: Model.t) => {
     | [] => "focussed"
     | _ => "on-path"
     };
+  let trash_carry = evt =>
+    inject(AddCarryToTrash((evt##.clientX, evt##.clientY)));
+  let focus_root = _ => inject(SetFocus(SingleCell([])));
   div(
     [Attr.class_(block_class)]
     @ [
       Attr.id("root"),
-      Attr.on_click(_ => inject(Update.SetFocus(SingleCell([])))),
-      Attr.on("drop", root_delete(~inject, model.dragged_path, model)),
-      Attr.on("dragover", _evt => {Event.Prevent_default}),
-      Attr.on("dragenter", _evt => {Event.Prevent_default}),
+      Attr.on_click(focus_root),
+      Attr.on("drop", trash_carry),
+      Attr.on("dragover", _evt => Event.Prevent_default),
+      Attr.on("dragenter", _evt => Event.Prevent_default),
       ...Keyboard.handlers(~inject, model),
     ],
     [

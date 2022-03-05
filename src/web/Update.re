@@ -4,23 +4,31 @@ open Core;
 
 [@deriving sexp]
 type t =
-  | SwapCells(int, int)
-  | ReorderCell(Block.cell_id, int)
-  | AddWordToTrash(Word.t, (int, int))
-  | EmptyTrash
-  | PickupCell(int)
-  | SetDraggedPath(Path.t)
-  | PickupWord(Word.t)
-  | InsertWord(Path.t, int, Word.t)
-  | InsertCell(int, Cell.t)
-  | Delete(Path.t)
-  | DeleteFocussedWord
+  | SetFocus(Model.focus)
+  | Pickup(Model.carry)
+  | PickupTrash(int)
+  | InsertWord(Path.t, Model.sep_id, Word.t)
+  | InsertNewWord(Path.t, Model.sep_id)
+  | InsertNewWordAfterFocus
   | UpdateWord(Path.t, Word.t => Word.t)
+  | DropReplaceWord(Path.t)
   | UpdateFocusedWord(Word.t => Word.t)
   | SetDropTarget(Model.drop_target)
-  | SetFocus(Model.focus)
-  | PrintAnnotatedBlock
-  | TogglePatternDisplay;
+  | DropInsertWord(Path.t, Model.sep_id)
+  | InsertCell(Block.cell_id, Cell.t)
+  | InsertNewCell(Block.cell_id)
+  | InsertNewCellAfterFocus
+  | ReorderCell(Block.cell_id, int)
+  | DropReorderCell(int)
+  | SwapCells(Block.cell_id, Block.cell_id)
+  | Delete(Path.t)
+  | DeleteFocussed
+  | DeleteCarryingSource
+  | AddCarryToTrash((int, int))
+  | EmptyTrash
+  | DebugPrint
+  | TogglePatternDisplay
+  | UpdateKeymap(Model.keymap => Model.keymap);
 
 let update_focus = (f, {focus, _} as model: Model.t) => {
   ...model,
@@ -32,19 +40,9 @@ let update_world = (f, {world, _} as model: Model.t) => {
   world: f(world),
 };
 
-let update_carried_cell = (f, {carried_cell, _} as model: Model.t) => {
+let update_carry = (f, {carry, _} as model: Model.t) => {
   ...model,
-  carried_cell: f(carried_cell),
-};
-
-let update_carried_word = (f, {carried_word, _} as model: Model.t) => {
-  ...model,
-  carried_word: f(carried_word),
-};
-
-let update_dragged_path = (f, {dragged_path, _} as model: Model.t) => {
-  ...model,
-  dragged_path: f(dragged_path),
+  carry: f(carry),
 };
 
 let update_drop_target = (f, {drop_target, _} as model: Model.t) => {
@@ -62,6 +60,11 @@ let update_pattern_display = (f, {pattern_display, _} as model: Model.t) => {
   pattern_display: f(pattern_display),
 };
 
+let update_keymap = (f, {keymap, _} as model: Model.t) => {
+  ...model,
+  keymap: f(keymap),
+};
+
 let num_words_expression = (block, cell_idx) =>
   Block.nth_cell(block, cell_idx)
   |> ((x: Cell.t) => x.expression)
@@ -77,7 +80,7 @@ let is_path_to_word: Path.t => bool = path => List.length(path) == 3;
 
 let rec apply: (Model.t, t, unit, ~schedule_action: 'a) => Model.t =
   (model: Model.t, update: t, state: State.t, ~schedule_action) => {
-    let model = update_drop_target(_ => NoTarget, model);
+    //let model = update_drop_target(_ => NoTarget, model);
     let app = (a, m) => apply(m, a, state, ~schedule_action);
     let model =
       switch (update) {
@@ -85,16 +88,23 @@ let rec apply: (Model.t, t, unit, ~schedule_action: 'a) => Model.t =
         //TODO: check if previous focus is empty word, and if so delete it maybe?
         // do we distinguish between empty words and holes?
         update_focus(_ => focus, model)
-      | SetDraggedPath(path) => update_dragged_path(_ => path, model)
+      | Pickup(thing) => update_carry(_ => thing, model)
+      | PickupTrash(idx) =>
+        switch (List.nth(model.trash, idx)) {
+        | TrashedWord(word, _) =>
+          model
+          |> update_trash(trash => ListUtil.remove(idx, trash))
+          |> app(Pickup(WordBrush(word)))
+        | TrashedCell(cell, _) =>
+          model
+          |> update_trash(trash => ListUtil.remove(idx, trash))
+          |> app(Pickup(CellBrush(cell)))
+        }
       | SetDropTarget(target) => update_drop_target(_ => target, model)
-      | PickupCell(idx) => update_carried_cell(_ => idx, model)
-      | PickupWord(word) => update_carried_word(_ => word, model)
       | SwapCells(a, b) =>
-        is_path_to_cell(model.dragged_path)
-          ? update_world(ListUtil.swap(a, b), model) : model
+        // TODO: refactored, not sure if works
+        update_world(ListUtil.swap(a, b), model)
       | Delete(path) =>
-        print_endline("delete:");
-        print_endline(Sexplib.Sexp.to_string_hum(Path.sexp_of_t(path)));
         switch (path) {
         | [Cell(Index(cell_idx, _)), Field(Expression), _, ..._]
             when is_only_word_empty_expression(model.world, path, cell_idx) => model
@@ -116,36 +126,94 @@ let rec apply: (Model.t, t, unit, ~schedule_action: 'a) => Model.t =
         | [Cell(Index(cell_idx, _))] =>
           update_world(ListUtil.remove(cell_idx), model)
         | _ => model
-        };
-      | DeleteFocussedWord =>
+        }
+      | DeleteFocussed =>
         switch (model.focus) {
         | SingleCell(path) => app(Delete(path), model)
         }
-      | AddWordToTrash(word, (x, y)) =>
-        update_trash(trash => [TrashedWord(word, (x, y)), ...trash], model)
+      | DeleteCarryingSource =>
+        switch (model.carry) {
+        | Nothing
+        | WordBrush(_)
+        | CellBrush(_) => model
+        | Word(path)
+        | Cell(path) => app(Delete(path), model)
+        }
+      | AddCarryToTrash((x, y)) =>
+        switch (model.carry) {
+        | Word(path) =>
+          let word =
+            switch (Path.get_word(path, model.world)) {
+            | Some(word) => word
+            | None => "lol. lmao."
+            };
+          model
+          |> update_trash(trash => [TrashedWord(word, (x, y)), ...trash])
+          |> app(DeleteCarryingSource);
+        | Cell(path) =>
+          let cell =
+            switch (Path.get_cell(path, model.world)) {
+            | Some(cell) => cell
+            | None => Cell.init()
+            };
+          model
+          |> update_trash(trash => [TrashedCell(cell, (x, y)), ...trash])
+          |> app(DeleteCarryingSource);
+        | _ => model
+        }
       | EmptyTrash => update_trash(_ => [], model)
       | InsertCell(sep_idx, cell) =>
-        let m = update_world(ListUtil.insert_at(sep_idx, cell), model);
         //TODO: index 666
-        app(
-          SetFocus(
-            SingleCell([
-              Cell(Index(sep_idx, List.length(m.world))),
-              Field(Expression),
-              Word(Index(0, 666)),
-            ]),
-          ),
-          m,
-        );
+        model
+        |> update_world(ListUtil.insert_at(sep_idx, cell))
+        |> app(
+             SetFocus(
+               SingleCell([
+                 Cell(Index(sep_idx, 1 + List.length(model.world))),
+                 Field(Expression),
+                 Word(Index(0, 666)),
+               ]),
+             ),
+           )
+      | InsertNewCell(sep_idx) =>
+        app(InsertCell(sep_idx, Core.Cell.init()), model)
       | ReorderCell(cell_idx, new_idx) =>
         let cell = Block.nth_cell(model.world, cell_idx);
         let new_idx = new_idx > cell_idx ? new_idx - 1 : new_idx;
         model
         |> app(Delete([Cell(Index(cell_idx, List.length(model.world)))]))
         |> app(InsertCell(new_idx, cell));
+      | InsertNewCellAfterFocus =>
+        let SingleCell(current_path) = model.focus;
+        switch (current_path) {
+        | [Cell(Index(cell_idx, _)), ..._] =>
+          app(InsertNewCell(cell_idx + 1), model)
+        | _ => model
+        };
+      | DropReorderCell(new_idx) =>
+        (
+          switch (model.carry) {
+          | Cell([Cell(Index(carry_idx, _)), ..._]) when model.keymap.shift =>
+            let cell = Block.nth_cell(model.world, carry_idx);
+            app(InsertCell(new_idx, cell), model);
+          | Cell([Cell(Index(carry_idx, _)), ..._]) =>
+            let cell = Block.nth_cell(model.world, carry_idx);
+            let new_idx = new_idx > carry_idx ? new_idx - 1 : new_idx;
+            model
+            |> app(
+                 Delete([
+                   Cell(Index(carry_idx, List.length(model.world))),
+                 ]),
+               )
+            |> app(InsertCell(new_idx, cell));
+          | CellBrush(cell) => app(InsertCell(new_idx, cell), model)
+          | _ => model
+          }
+        )
+        // hack? sometimes ondragleave doesn't get triggered when dropping
+        //|> update_drop_target(_ => NoTarget)
+        |> app(Pickup(Nothing))
       | InsertWord(path, sep_idx, new_word) =>
-        let model = update_drop_target(_ => NoTarget, model);
-        // hack: sometimes ondragleave doesn't get triggered when dropping
         let m =
           update_world(
             world =>
@@ -174,6 +242,45 @@ let rec apply: (Model.t, t, unit, ~schedule_action: 'a) => Model.t =
           },
           m,
         );
+      | InsertNewWord(path, sep_idx) =>
+        app(InsertWord(path, sep_idx, Core.Word.empty), model)
+      | InsertNewWordAfterFocus =>
+        let SingleCell(current_path) = model.focus;
+        switch (current_path) {
+        | [_, _, Word(Index(n, _)), ..._]
+            when
+              Path.get_word(current_path, model.world)
+              != Some(Core.Word.empty) =>
+          app(InsertNewWord(current_path, n + 1), model)
+        | _ => model
+        };
+      | DropInsertWord(path, sep_idx) =>
+        (
+          switch (model.carry) {
+          | Word([_, _, Word(Index(word_idx, _)), ..._] as word_path) =>
+            switch (Core.Path.get_word(word_path, model.world)) {
+            | None => model
+            | Some(carry_word) when model.keymap.shift =>
+              // if holding shift, copy instead of move
+              app(InsertWord(path, sep_idx, carry_word), model)
+            | Some(carry_word) =>
+              if (sep_idx > word_idx) {
+                model
+                |> app(InsertWord(path, sep_idx, carry_word))
+                |> app(Delete(word_path));
+              } else {
+                model
+                |> app(Delete(word_path))
+                |> app(InsertWord(path, sep_idx, carry_word));
+              }
+            }
+          | WordBrush(word) => app(InsertWord(path, sep_idx, word), model)
+          | _ => model
+          }
+        )
+        // hack? sometimes ondragleave doesn't get triggered when dropping
+        //|> update_drop_target(_ => NoTarget)
+        |> app(Pickup(Nothing))
       | UpdateFocusedWord(f) =>
         switch (model.focus) {
         | SingleCell(path) => app(UpdateWord(path, f), model)
@@ -197,7 +304,44 @@ let rec apply: (Model.t, t, unit, ~schedule_action: 'a) => Model.t =
             },
           model,
         )
-      | PrintAnnotatedBlock =>
+      | DropReplaceWord(path) =>
+        // TODO: figure out how to combine this with dropinsertword
+        switch (path) {
+        | [_, _, Word(Index(path_word_idx, _)), ..._] =>
+          (
+            switch (model.carry) {
+            | Word([_, _, Word(Index(word_idx, _)), ..._] as word_path) =>
+              switch (Core.Path.get_word(word_path, model.world)) {
+              | None => model
+              | Some(carry_word) when model.keymap.shift =>
+                // if holding shift, copy instead of move
+                model
+                |> app(Delete(path))
+                |> app(InsertWord(path, path_word_idx, carry_word))
+              | Some(carry_word) =>
+                if (path_word_idx > word_idx) {
+                  model
+                  |> app(InsertWord(path, path_word_idx, carry_word))
+                  |> app(Delete(word_path))
+                  |> app(Delete(path));
+                } else {
+                  model
+                  |> app(Delete(word_path))
+                  |> app(Delete(path))
+                  |> app(InsertWord(path, path_word_idx, carry_word));
+                }
+              }
+            | WordBrush(word) =>
+              model
+              |> app(Delete(path))
+              |> app(InsertWord(path, path_word_idx, word))
+            | _ => model
+            }
+          )
+          |> app(Pickup(Nothing))
+        | _ => model
+        }
+      | DebugPrint =>
         let ann_block = AnnotatedBlock.mk(model.world);
         print_endline(
           Sexplib.Sexp.to_string_hum(
@@ -224,11 +368,9 @@ let rec apply: (Model.t, t, unit, ~schedule_action: 'a) => Model.t =
             },
           model,
         )
+      | UpdateKeymap(f) => update_keymap(f, model)
       };
     update_world(Interpreter.run_block, model);
   };
 
-/*
- TODO:
- dragging on numbers changes instead of moves?
-  */
+//IDEA: dragging on numbers changes instead of moves?

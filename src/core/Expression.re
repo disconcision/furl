@@ -25,8 +25,8 @@ and binding = (Pattern.form, form);
 
 let prim_of_string: string => option(prim) =
   fun
-  | "add" => Some(Add)
-  | "mult" => Some(Mult)
+  | "sum" => Some(Add)
+  | "prod" => Some(Mult)
   | "fact" => Some(Fact)
   | _ => None;
 

@@ -59,6 +59,13 @@ and is_valid_path_char: (Word.t, t) => bool =
       false;
     };
 
+let get_cell: (t, Block.t) => option(Cell.t) =
+  (path, block) =>
+    switch (path) {
+    | [Cell(Index(idx, _)), ..._] => Some(Block.nth_cell(block, idx))
+    | _ => None
+    };
+
 let get_word: (t, Block.t) => option(Word.t) =
   (path, block) =>
     switch (path) {

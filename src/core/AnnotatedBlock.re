@@ -165,8 +165,8 @@ let annotate_cell: (Path.ctx, Path.t, int, int, Cell.t) => annotated_cell =
   };
 
 let init_ctx = [
-  ("add", [Path.Cell(Index(-1, -1))]),
-  ("mult", [Path.Cell(Index(-1, -1))]),
+  ("sum", [Path.Cell(Index(-1, -1))]),
+  ("prod", [Path.Cell(Index(-1, -1))]),
   ("fact", [Path.Cell(Index(-1, -1))]),
 ]; //TODO
 
@@ -280,8 +280,8 @@ let reverse_annonate_cell:
   (list(Word.t), Pattern.uses_ctx, annotated_cell) =>
   (Pattern.uses_ctx, annotated_cell) =
   (live_ctx, co_ctx, {pattern, expression, vars, _} as ann_cell) => {
-    let co_ctx = gather_uses(co_ctx, expression);
     let (co_ctx, pattern) = consume_uses(co_ctx, pattern);
+    let co_ctx = gather_uses(co_ctx, expression);
     let uses = get_pat_var_uses(pattern);
     let vars = {
       ...vars,

@@ -30,8 +30,6 @@ let parse_atom: (uses_ctx, Word.t) => atom =
 
 let parse: (uses_ctx, Word.s) => form =
   (ctx, words) => {
-    print_endline("PRASE:");
-    print_endline(Sexplib.Sexp.to_string_hum(Word.sexp_of_s(words)));
     switch (words) {
     | [x] => Atom(parse_atom(ctx, x))
     | _ => Unknown(words)

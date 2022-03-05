@@ -23,7 +23,30 @@ let is_next_word_operator = (block, path: Path.t) =>
 
 let handlers = (~inject: Update.t => Event.t, model: Model.t) => [
   Attr.on_keypress(_evt => Event.Prevent_default),
-  Attr.on_keyup(_evt => Event.Many([])),
+  Attr.on_keyup(evt => {
+    let key = JsUtil.get_key(evt);
+    let updates: list(Update.t) = {
+      print_endline("key pressed:");
+      print_endline(key);
+      switch (key) {
+      | "Shift" =>
+        print_endline("SHIFT UP");
+        [UpdateKeymap(km => {...km, shift: false})];
+      | _ => []
+      };
+    };
+    switch (updates) {
+    | [] => Event.Many([])
+    | [_, ..._] =>
+      Event.(
+        Many([
+          Prevent_default,
+          Stop_propagation,
+          ...List.map(inject, updates),
+        ])
+      )
+    };
+  }),
   /*
    Event.Many(
      switch (JsUtil.get_key(evt), zipper) {
@@ -37,39 +60,27 @@ let handlers = (~inject: Update.t => Event.t, model: Model.t) => [
   Attr.on_keydown(evt => {
     let key = JsUtil.get_key(evt);
     let held = m => JsUtil.held(m, evt);
-    let SingleCell(current_path) = model.focus;
-    let update_focus = f => [
-      Update.SetFocus(SingleCell(f(model.world, current_path))),
-    ];
+    let update_focus = f => {
+      let SingleCell(current_path) = model.focus;
+      [Update.SetFocus(SingleCell(f(model.world, current_path)))];
+    };
     let updates: list(Update.t) =
       if (!held(Ctrl) && !held(Alt) && !held(Meta)) {
         print_endline("key pressed:");
         print_endline(key);
         switch (key) {
-        | "F3" => [PrintAnnotatedBlock]
-        | "Shift" => []
+        | "F3" => [DebugPrint]
+        | "Shift" =>
+          print_endline("SHIFT DOWN");
+          [UpdateKeymap(km => {...km, shift: true})];
         | "ArrowRight" => update_focus(Core.Path.next_word_path)
         | "ArrowLeft" => update_focus(Core.Path.prev_word_path)
         | "ArrowUp" => update_focus(Core.Path.up_word_path)
         | "ArrowDown" => update_focus(Core.Path.down_word_path)
-        | "Enter" =>
-          switch (current_path) {
-          | [Cell(Index(cell_idx, _)), ..._] => [
-              Update.InsertCell(cell_idx + 1, Core.Cell.init()),
-            ]
-          | _ => []
-          }
-        | " " =>
-          switch (current_path) {
-          | [_, _, Word(Index(n, _)), ..._]
-              when
-                Path.get_word(current_path, model.world)
-                != Some(Core.Word.empty) => [
-              InsertWord(current_path, n + 1, Core.Word.empty),
-            ]
-          | _ => []
-          }
+        | "Enter" => [InsertNewCellAfterFocus]
+        | " " => [InsertNewWordAfterFocus]
         | op when Core.Expression.is_operator(op) =>
+          let SingleCell(current_path) = model.focus;
           switch (current_path, Path.get_word(current_path, model.world)) {
           | (_, Some(op1)) when Core.Expression.is_operator(op1) => []
           | (_, Some(op1)) when op1 == Core.Word.empty => [
@@ -83,12 +94,13 @@ let handlers = (~inject: Update.t => Event.t, model: Model.t) => [
             ]
           | ([_, _, Word(Index(n, _)), ..._], _) => [
               InsertWord(current_path, n + 1, op),
-              InsertWord(current_path, n + 2, Core.Word.empty),
+              InsertNewWord(current_path, n + 2),
             ]
           | _ => []
-          }
-        | "Delete" => [DeleteFocussedWord]
+          };
+        | "Delete" => [DeleteFocussed]
         | "Backspace" =>
+          let SingleCell(current_path) = model.focus;
           let words = Path.get_words(current_path, model.world);
           //TODO: if cell selected, select last word
           switch (words) {
@@ -117,11 +129,11 @@ let handlers = (~inject: Update.t => Event.t, model: Model.t) => [
                 when
                   word == Core.Word.empty
                   && is_prev_word_operator(model.world, current_path) => [
-                Update.DeleteFocussedWord,
+                Update.DeleteFocussed,
                 Update.SetFocus(
                   SingleCell(Core.Path.decr_word(current_path)),
                 ),
-                Update.DeleteFocussedWord,
+                Update.DeleteFocussed,
                 Update.SetFocus(
                   SingleCell(
                     current_path |> Core.Path.decr_word |> Core.Path.decr_word,
@@ -129,7 +141,7 @@ let handlers = (~inject: Update.t => Event.t, model: Model.t) => [
                 ),
               ]
             | Some(word) when word == Core.Word.empty => [
-                Update.DeleteFocussedWord,
+                Update.DeleteFocussed,
                 Update.SetFocus(
                   SingleCell(Core.Path.decr_word(current_path)),
                 ),
@@ -144,6 +156,7 @@ let handlers = (~inject: Update.t => Event.t, model: Model.t) => [
             }
           };
         | x =>
+          let SingleCell(current_path) = model.focus;
           switch (Path.get_word(current_path, model.world), current_path) {
           | (Some(word), [_, _, Word(Index(n, _)), ..._])
               // if we're on an operator, advance to next word
@@ -155,7 +168,7 @@ let handlers = (~inject: Update.t => Event.t, model: Model.t) => [
                 str => str == Core.Word.empty ? x : str ++ x,
               ),
             ]
-          }
+          };
         };
       } else if (! Os.is_mac^ && held(Ctrl) && !held(Alt) && !held(Meta)) {
         switch (key) {

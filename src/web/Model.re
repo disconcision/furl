@@ -20,7 +20,7 @@ type word_path = (Block.cell_id, Cell.field, Cell.word_idx);
 [@deriving sexp]
 type word_sep_path = word_path;
 [@deriving sexp]
-type cell_sep_path = int;
+type sep_id = int;
 [@deriving sexp]
 type drop_target =
   | NoTarget
@@ -29,8 +29,17 @@ type drop_target =
   | CellSepatator(int);
 
 [@deriving sexp]
+type carry =
+  | Nothing
+  | Word(Path.t)
+  | WordBrush(Word.t)
+  | Cell(Path.t)
+  | CellBrush(Cell.t);
+
+[@deriving sexp]
 type trash_item =
-  | TrashedWord(string, (int, int));
+  | TrashedCell(Cell.t, (int, int))
+  | TrashedWord(Word.t, (int, int));
 
 [@deriving sexp]
 type trash = list(trash_item);
@@ -41,33 +50,43 @@ type pattern_display =
   | Emoji;
 
 [@deriving sexp]
+type keymap = {
+  shift: bool,
+  ctrl: bool,
+};
+
+[@deriving sexp]
 type t = {
   world: Block.t,
   cell_proj,
   focus,
   trash,
   drop_target,
-  carried_cell: int,
-  carried_word: string,
-  dragged_path: Path.t,
+  carry,
   pattern_display,
+  keymap,
 };
 
 let init_world: Block.t = [
   {
-    pattern: ["blarg"],
-    expression: ["add", "77", "5", "123"],
+    pattern: ["bro"],
+    expression: ["sum", "77", "5", "123"],
     value: ["205"],
   },
-  {pattern: ["freezepop"], expression: ["fact", "5"], value: ["120"]},
+  {pattern: ["greeze"], expression: ["fact", "5"], value: ["120"]},
   {
-    pattern: ["crork"],
-    expression: ["mult", "blarg", "freezepop"],
+    pattern: ["cloun"],
+    expression: ["prod", "bro", "greeze"],
     value: ["24600"],
+  },
+  {
+    pattern: ["foob"],
+    expression: ["112", "+", "813", "+", "bro"],
+    value: ["1135"],
   },
 ];
 let init_path: Path.t = [
-  Cell(Index(0, 3)),
+  Cell(Index(0, 4)),
   Field(Expression),
   Word(Index(0, 4)),
   Char(Index(0, 3)),
@@ -85,10 +104,12 @@ let init = {
   world: init_world,
   cell_proj: ExpressionPattern,
   focus: SingleCell(init_path),
-  carried_cell: 0,
-  carried_word: "",
-  dragged_path: [],
+  carry: Nothing,
   drop_target: NoTarget,
   trash: [],
   pattern_display: Name,
+  keymap: {
+    shift: false,
+    ctrl: false,
+  },
 };

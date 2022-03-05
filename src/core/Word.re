@@ -11,23 +11,22 @@ let var_regex =
   Re.Str.regexp("^\\([a-zA-Z]\\|_[_a-zA-Z0-9]\\)[_a-zA-Z0-9']*$");
 let is_valid_var = s => Re.Str.string_match(var_regex, s, 0);
 
-let running_index = ref(3);
+let running_index = ref(4);
 
 let running_names = [
-  "blarg",
-  "freezepop",
-  "crork",
-  "foo",
-  "cruby",
-  "baz",
+  "bro",
+  "greeze",
+  "cloun",
+  "foob",
+  "pruby",
+  "bez",
+  "klork",
   "crunk",
   "dree",
-  "bar",
-  "gruben",
-  "bro",
+  "bap",
+  "gurb",
   "weeb",
-  "grug",
-  "carrudy",
+  "shrork",
 ];
 let emoji_names = [
   "📎",
@@ -52,22 +51,21 @@ let emoji_names = [
 //TODO: better approach
 let emoji_of_default: string => string =
   fun
-  | "blarg" => "📎"
-  | "freezepop" => "🌽"
-  | "crork" => "💭"
-  | "foo" => "🌘"
-  | "cruby" => "🍸"
-  | "baz" => "🎈"
+  | "bro" => "📎"
+  | "greeze" => "🌽"
+  | "cloun" => "💭"
+  | "foob" => "🌘"
+  | "pruby" => "🍸"
+  | "bez" => "🎈"
+  | "klork" => "🐠"
   | "crunk" => "🍋"
-  | "dree" => "🐠"
-  | "bar" => "🖍"
-  | "gruben" => "🤘"
-  | "bro" => "🍮"
-  | "weeb" => "👌"
-  | "grug" => "🌈"
-  | "carrudy" => "🐿"
-  | "add" => "add"
-  | "mult" => "mult"
+  | "dree" => "🖍"
+  | "bap" => "🤘"
+  | "gurb" => "🌈"
+  | "weeb" => "🐿"
+  | "shork" => "🦈"
+  | "sum" => "sum"
+  | "prod" => "prod"
   | "fact" => "fact"
   | _ => "🤔";
 
