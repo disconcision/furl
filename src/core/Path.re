@@ -191,6 +191,24 @@ let prev_word = (block: Cell.s, path: t): option(Word.t) =>
 let next_word = (block: Cell.s, path: t): option(Word.t) =>
   get_word(next_word_path(block, path), block);
 
+let is_a_next_word = (block, path: t) =>
+  switch (next_word(block, path)) {
+  | Some(_) => true
+  | _ => false
+  };
+
+let is_next_word_p = (p, block, path: t) =>
+  switch (next_word(block, path)) {
+  | Some(op) when p(op) => true
+  | _ => false
+  };
+
+let is_prev_word_p = (p, block, path: t) =>
+  switch (prev_word(block, path)) {
+  | Some(op) when p(op) => true
+  | _ => false
+  };
+
 let decr_word = (path: t): t =>
   switch (path) {
   | [c, _, Word(Index(0, _)), ..._] => [c]

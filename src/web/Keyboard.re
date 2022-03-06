@@ -35,27 +35,25 @@ let handlers = (~inject: Update.t => Event.t, model: Model.t) => [
         switch (key) {
         | "F3" => [DebugPrint]
         | "Shift" => [UpdateKeymap(km => {...km, shift: true})]
-        | "ArrowDown" when model.keymap.shift => [
-            AtSingleFocus(SwapCellDown),
-          ]
-        | "ArrowUp" when model.keymap.shift => [AtSingleFocus(SwapCellUp)]
-        | "ArrowRight" => [AtSingleFocus(MoveRight)]
-        | "ArrowLeft" => [AtSingleFocus(MoveLeft)]
-        | "ArrowUp" => [AtSingleFocus(MoveUp)]
-        | "ArrowDown" => [AtSingleFocus(MoveDown)]
+        | "ArrowDown" when model.keymap.shift => [UniFocus(SwapCellDown)]
+        | "ArrowUp" when model.keymap.shift => [UniFocus(SwapCellUp)]
+        | "ArrowRight" => [UniFocus(MoveRight)]
+        | "ArrowLeft" => [UniFocus(MoveLeft)]
+        | "ArrowUp" => [UniFocus(MoveUp)]
+        | "ArrowDown" => [UniFocus(MoveDown)]
         | "Enter" =>
           switch (model.world) {
           | [] => [InsertNewCell(0)]
-          | _ => [InsertNewCellAfterFocus]
+          | _ => [UniFocus(InsertNewCellF)]
           }
         | " " =>
           switch (model.world) {
           | [] => [InsertNewCell(0)]
-          | _ => [InsertNewWordAfterFocus]
+          | _ => [UniFocus(InsertNewWordF)]
           }
-        | "Delete" => [DeleteFocussed]
-        | "Backspace" => [AtSingleFocus(Backspace)]
-        | x => [AtSingleFocus(InsertChar(x))]
+        | "Delete" => [UniFocus(DeleteF)]
+        | "Backspace" => [UniFocus(Backspace)]
+        | x => [UniFocus(InsertChar(x))]
         };
       } else if (! Os.is_mac^ && held(Ctrl) && !held(Alt) && !held(Meta)) {
         switch (key) {

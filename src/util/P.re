@@ -5,3 +5,8 @@ let p' = (str, sexp) =>
   |> Sexplib.Sexp.to_string_hum
   |> (s => str ++ ": " ++ s)
   |> print_endline;
+
+let ps = sss => {
+  let _ = List.map(((a, b)) => p'(a, b), sss);
+  ();
+};

@@ -14,13 +14,17 @@ type cell_proj =
   //| ExpressionPatternValue
   | ExpressionPattern;
 
+[@deriving sexp]
+type cell_sep_id = int;
+
 //TODO: refactor to use path
 [@deriving sexp]
 type word_path = (Block.cell_id, Cell.field, Cell.word_idx);
 [@deriving sexp]
 type word_sep_path = word_path;
 [@deriving sexp]
-type sep_id = int;
+type word_sep_id = int;
+
 [@deriving sexp]
 type drop_target =
   | NoTarget

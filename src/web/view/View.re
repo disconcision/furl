@@ -403,7 +403,7 @@ let tool_atom_view = (~inject, word): t => {
       Attr.classes(["atom", "toolbar-atom"]),
       Attr.create("draggable", "true"),
       Attr.on_mousedown(_ => Event.(Many([Stop_propagation]))),
-      Attr.on_click(_ => stop(inject(UpdateFocusedWord(_ => word)))),
+      Attr.on_click(_ => stop(inject(UniFocus(UpdateWord(_ => word))))),
       Attr.on("dragstart", _ => stop(inject(Pickup(WordBrush(word))))),
       Attr.on("dragend", _ => inject(SetDropTarget(NoTarget))),
     ],
