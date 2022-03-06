@@ -38,15 +38,15 @@ jobs:
           token: ${{ secrets.DEPLOY_FURL }}
           path: server
       - name: Clear any old build of this branch # STEP 5
-        run: if [ -d "${BRANCH_NAME}" ] ; then rm -rf "${BRANCH_NAME}" ; fi
+        run: if [ -d "furl/${BRANCH_NAME}" ] ; then rm -rf "furl/${BRANCH_NAME}" ; fi
         working-directory: ./server
       - name: Copy in newly built source # STEP 6
         run: |
-          mkdir "./server/${BRANCH_NAME}" &&
-          cp -r "./source/_build/default/src/web/www"/* "./server/${BRANCH_NAME}" &&
+          mkdir "./server/furl/${BRANCH_NAME}" &&
+          cp -r "./source/_build/default/src/web/www"/* "./server/furl/${BRANCH_NAME}" &&
           if [ "${BRANCH_NAME}" == "plus" ]
           then
-            cp -r "./source/_build/default/src/web/www"/* "./server"
+            cp -r "./source/_build/default/src/web/www"/* "./server/furl"
           fi
       - name: Commit to website aka deploy # STEP 7
         run: |
