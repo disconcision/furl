@@ -38,9 +38,9 @@ type t =
   // drag-n-drop
   | Pickup(Model.carry)
   | SetDropTarget(Model.drop_target)
-  | DropReplaceWord(Path.t)
-  | DropReorderWord(Path.t, Model.word_sep_id)
-  | DropReorderCell(Model.cell_sep_id)
+  | DropOnWord(Path.t)
+  | DropOnWordSep(Path.t, Model.word_sep_id)
+  | DropOnCellSep(Model.cell_sep_id)
   | DeleteCarrySource
   // trash
   | TrashCarry(Model.screen_coords)
@@ -116,12 +116,13 @@ let rec apply: (Model.t, t, unit, ~schedule_action: 'a) => Model.t =
         | NoCarry
         | WordBrush(_)
         | CellBrush(_) => model
-        | Word(path)
+        | WordExp({path, _})
+        | WordPat({path, _})
         | Cell(path) => app(Delete(path), model)
         }
       | TrashCarry(coords) =>
         switch (model.carry) {
-        | Word(path) =>
+        | WordExp({path, _}) =>
           let word =
             switch (Path.get_word(path, model.world)) {
             | Some(word) => word
@@ -162,19 +163,39 @@ let rec apply: (Model.t, t, unit, ~schedule_action: 'a) => Model.t =
         model
         |> app(Delete([Cell(Index(cell_idx, List.length(model.world)))]))
         |> app(InsertCell(new_idx, cell));
-      | DropReorderCell(sep_idx) =>
+      | DropOnCellSep(sep_idx) =>
         let block = model.world;
         (
           switch (model.carry) {
+          // 1. unbound names get new cells
+          | WordExp({form: Unbound(name), path, _})
+              when Path.is_cell_idx((==)(sep_idx), path) =>
+            let cell = Cell.init_name(name);
+            app(InsertCell(sep_idx, cell), model);
+          // 2. literals get abstracted
+          | WordExp({form: Lit(n), path, _})
+              when Path.is_cell_idx((==)(sep_idx), path) =>
+            switch (Path.cell_idx(path)) {
+            | Some(i) when sep_idx == i =>
+              let incr_path = Path.update_cell_idx((+)(1), path);
+              let (new_name, cell) = Cell.init_num(n);
+              model
+              |> app(InsertCell(sep_idx, cell))
+              |> app(UpdateWord(incr_path, _ => new_name));
+            | _ => model
+            }
+          // 3. cells get copied if shift is pressed
           | Cell([Cell(Index(carry_idx, _)), ..._]) when model.keymap.shift =>
             let cell = Block.nth_cell(block, carry_idx);
             app(InsertCell(sep_idx, cell), model);
+          // 4. cells get reordered otherwise
           | Cell([Cell(Index(carry_idx, _)), ..._]) =>
             let cell = Block.nth_cell(block, carry_idx);
             let new_idx = sep_idx > carry_idx ? sep_idx - 1 : sep_idx;
             model
             |> app(Delete([Cell(Index(carry_idx, List.length(block)))]))
             |> app(InsertCell(new_idx, cell));
+          // 5. restore cell from trash
           | CellBrush(cell) => app(InsertCell(sep_idx, cell), model)
           | _ => model
           }
@@ -199,25 +220,33 @@ let rec apply: (Model.t, t, unit, ~schedule_action: 'a) => Model.t =
         );
       | InsertNewWord(path, sep_idx) =>
         app(InsertWord(path, sep_idx, Core.Word.empty), model)
-      | DropReorderWord(path, sep_idx) =>
+      | DropOnWordSep(path, sep_idx) =>
         (
           switch (model.carry) {
-          | Word([_, _, Word(Index(word_idx, _)), ..._] as word_path) =>
-            switch (Core.Path.get_word(word_path, model.world)) {
-            | None => model
-            | Some(carry_word) when model.keymap.shift =>
-              // if holding shift, copy instead of move
-              app(InsertWord(path, sep_idx, carry_word), model)
-            | Some(carry_word) =>
-              if (sep_idx > word_idx) {
-                model
-                |> app(InsertWord(path, sep_idx, carry_word))
-                |> app(Delete(word_path));
-              } else {
-                model
-                |> app(Delete(word_path))
-                |> app(InsertWord(path, sep_idx, carry_word));
-              }
+          | WordPat({path: origin_path, word, _}) =>
+            switch (Path.cell_idx(path)) {
+            | Some(target_cell_idx)
+                when Path.is_cell_idx((>)(target_cell_idx), origin_path) =>
+              model |> app(InsertWord(path, sep_idx, word))
+            | _ => model
+            }
+          | WordExp({word, _}) when model.keymap.shift =>
+            // if holding shift, copy instead of move
+            app(InsertWord(path, sep_idx, word), model)
+          | WordExp({
+              path: [_, _, Word(Index(word_idx, _)), ..._] as word_path,
+              word,
+              _,
+            })
+              when !model.keymap.shift =>
+            if (sep_idx > word_idx) {
+              model
+              |> app(InsertWord(path, sep_idx, word))
+              |> app(Delete(word_path));
+            } else {
+              model
+              |> app(Delete(word_path))
+              |> app(InsertWord(path, sep_idx, word));
             }
           | WordBrush(word) => app(InsertWord(path, sep_idx, word), model)
           | _ => model
@@ -226,33 +255,44 @@ let rec apply: (Model.t, t, unit, ~schedule_action: 'a) => Model.t =
         // hack? sometimes ondragleave doesn't get triggered when dropping
         //|> update_drop_target(_ => NoTarget)
         |> app(Pickup(NoCarry))
-      | DropReplaceWord(path) =>
-        // TODO: figure out how to combine this with dropinsertword
+      | DropOnWord(path) =>
+        // TODO: figure out how to combine this with droponwordsep
         switch (path) {
         | [_, _, Word(Index(path_word_idx, _)), ..._] =>
           (
             switch (model.carry) {
-            | Word([_, _, Word(Index(word_idx, _)), ..._] as word_path) =>
-              switch (Core.Path.get_word(word_path, model.world)) {
-              | None => model
-              | Some(carry_word) when model.keymap.shift =>
-                // if holding shift, copy instead of move
+            | WordPat({path: origin_path, word, _}) =>
+              switch (Path.cell_idx(path)) {
+              | Some(target_cell_idx)
+                  when Path.is_cell_idx((>)(target_cell_idx), origin_path) =>
                 model
                 |> app(Delete(path))
-                |> app(InsertWord(path, path_word_idx, carry_word))
-              | Some(_) when path_word_idx == word_idx => model
-              | Some(carry_word) =>
-                if (path_word_idx > word_idx) {
-                  model
-                  |> app(InsertWord(path, path_word_idx, carry_word))
-                  |> app(Delete(word_path))
-                  |> app(Delete(path));
-                } else {
-                  model
-                  |> app(Delete(word_path))
-                  |> app(Delete(path))
-                  |> app(InsertWord(path, path_word_idx, carry_word));
-                }
+                |> app(InsertWord(path, path_word_idx, word))
+              | _ => model
+              }
+            | WordExp({word, _}) when model.keymap.shift =>
+              // if holding shift, copy instead of move
+              model
+              |> app(Delete(path))
+              |> app(InsertWord(path, path_word_idx, word))
+            | WordExp({
+                path: [_, _, Word(Index(word_idx, _)), ..._] as word_path,
+                word,
+                _,
+              })
+                when !model.keymap.shift =>
+              if (path_word_idx == word_idx) {
+                model;
+              } else if (path_word_idx > word_idx) {
+                model
+                |> app(InsertWord(path, path_word_idx, word))
+                |> app(Delete(word_path))
+                |> app(Delete(path));
+              } else {
+                model
+                |> app(Delete(word_path))
+                |> app(Delete(path))
+                |> app(InsertWord(path, path_word_idx, word));
               }
             | WordBrush(word) =>
               model

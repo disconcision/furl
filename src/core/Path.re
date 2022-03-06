@@ -17,6 +17,31 @@ type t = list(path_frame);
 [@deriving sexp]
 type ctx = Environment.t_(t);
 
+let is_to_cell: t => bool =
+  path =>
+    switch (path) {
+    | [Cell(_)] => true
+    | _ => false
+    };
+
+let cell_idx = (path: t): option(Block.cell_id) =>
+  switch (path) {
+  | [Cell(Index(i, _)), ..._] => Some(i)
+  | _ => None
+  };
+
+let is_cell_idx = (p, path: t) =>
+  switch (path) {
+  | [Cell(Index(i, _)), ..._] => p(i)
+  | _ => false
+  };
+
+let update_cell_idx = (f, path: t): t =>
+  switch (path) {
+  | [Cell(Index(i, k)), ...ps] => [Cell(Index(f(i), k)), ...ps]
+  | _ => path
+  };
+
 let rec is_valid: (Block.t, t) => bool =
   (block, path) =>
     switch (path) {
@@ -221,10 +246,6 @@ let decr_word = (path: t): t =>
   | _ => path
   };
 
-//let is_to_cell: t => bool = path => List.length(path) == 1;
-
-//let is_to_word: t => bool = path => List.length(path) == 3;
-
 let num_words_in_exp = (block, cell_idx) =>
   Block.nth_cell(block, cell_idx) |> (x => x.expression) |> List.length;
 
@@ -235,8 +256,9 @@ let is_exp_empty_word = (block, path, cell_idx) =>
 let delete: (t, Block.t) => Block.t =
   (path, block) => {
     switch (path) {
-    | [Cell(Index(cell_idx, _)), Field(Expression), _, ..._]
-        when is_exp_empty_word(block, path, cell_idx) => block
+    //TODO: figure out why below was even a thing
+    //| [Cell(Index(cell_idx, _)), Field(Expression), _, ..._]
+    //    when is_exp_empty_word(block, path, cell_idx) => block
     | [
         Cell(Index(cell_idx, _)),
         Field(Expression),

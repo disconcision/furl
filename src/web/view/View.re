@@ -64,7 +64,7 @@ let focus_word = (path: option(Path.t), i: int): option(Path.t) =>
 
 let exp_atom_view =
     (
-      {word, path: this_path, form, _}: AnnotatedBlock.annotated_word_exp,
+      {word, path: this_path, form, _} as ann_word: AnnotatedBlock.annotated_word_exp,
       ~path: option(Path.t),
       ~inject,
       ~model: Model.t,
@@ -77,13 +77,17 @@ let exp_atom_view =
     | _ => NoTarget
     };
   let is_drop_target =
-    switch (model.carry) {
-    | Word(_)
-    | WordBrush(_)
-        when model.drop_target != NoTarget && model.drop_target == this_target =>
-      true
-    | _ => false
-    };
+    model.drop_target != NoTarget
+    && model.drop_target == this_target
+    && (
+      switch (model.carry, Path.cell_idx(this_path)) {
+      | (WordPat({form: Some(Var(_)), path, _}), Some(exp_idx))
+          when Path.is_cell_idx((>)(exp_idx), path) =>
+        true
+      | (WordExp(_) | WordBrush(_), _) => true
+      | _ => false
+      }
+    );
   let binding_highlight_class =
     switch (form, model.focus) {
     | (Var(_, binding_path), SingleCell(focussed_path))
@@ -112,12 +116,12 @@ let exp_atom_view =
       ),
       Attr.on_click(set_focus(this_path, inject)),
       Attr.create("draggable", "true"),
-      Attr.on("dragstart", _ => stop(inject(Pickup(Word(this_path))))),
+      Attr.on("dragstart", _ => stop(inject(Pickup(WordExp(ann_word))))),
       Attr.on("dragenter", _ =>
         stop(prevent(inject(SetDropTarget(this_target))))
       ),
       Attr.on("dragend", _ => inject(SetDropTarget(NoTarget))),
-      Attr.on("drop", _ => stop(inject(DropReplaceWord(this_path)))),
+      Attr.on("drop", _ => stop(inject(DropOnWord(this_path)))),
     ],
     [word_view],
   );
@@ -125,7 +129,7 @@ let exp_atom_view =
 
 let pat_atom_view =
     (
-      {word, path: this_path, form, _}: AnnotatedBlock.annotated_word_pat,
+      {word, path: this_path, form, _} as ann_pat: AnnotatedBlock.annotated_word_pat,
       ~path: option(Path.t),
       ~inject,
       ~model: Model.t,
@@ -154,7 +158,7 @@ let pat_atom_view =
       ),
       Attr.on_click(set_focus(this_path, inject)),
       Attr.create("draggable", "true"),
-      Attr.on("dragstart", _ => stop(inject(Pickup(Word(this_path))))),
+      Attr.on("dragstart", _ => stop(inject(Pickup(WordPat(ann_pat))))),
     ],
     [word_view],
   );
@@ -216,22 +220,28 @@ let value_view =
 };
 
 let cell_sep_view =
-    (~inject, ~model as {drop_target, carry, _}: Model.t, cell_idx) => {
-  let this_target: Model.drop_target = CellSepatator(cell_idx);
+    (~inject, ~model as {drop_target, carry, _}: Model.t, sep_idx) => {
+  let this_target: Model.drop_target = CellSepatator(sep_idx);
   let is_drop_target =
-    switch (carry) {
-    | Cell(_)
-    | CellBrush(_) when drop_target != NoTarget && drop_target == this_target =>
-      true
-    | _ => false
-    };
+    drop_target != NoTarget
+    && drop_target == this_target
+    && (
+      switch (carry) {
+      | WordExp({form: Lit(_) | Unbound(_), path, _})
+          when Path.is_cell_idx((==)(sep_idx), path) =>
+        true
+      | Cell(_)
+      | CellBrush(_) => true
+      | _ => false
+      }
+    );
   div(
     [
       Attr.classes(
         ["cell-separator"] @ (is_drop_target ? ["active-drop-target"] : []),
       ),
-      Attr.on_click(_ => stop(inject(InsertNewCell(cell_idx)))),
-      Attr.on("drop", _ => stop(inject(DropReorderCell(cell_idx)))),
+      Attr.on_click(_ => stop(inject(InsertNewCell(sep_idx)))),
+      Attr.on("drop", _ => stop(inject(DropOnCellSep(sep_idx)))),
       Attr.on("dragover", _ => {Event.Prevent_default}),
       Attr.on("dragenter", _ =>
         prevent(inject(SetDropTarget(this_target)))
@@ -256,19 +266,24 @@ let word_sep_view =
     | _ => NoTarget
     };
   let is_drop_target =
-    switch (carry) {
-    | Word(_)
-    | WordBrush(_) when drop_target != NoTarget && drop_target == this_target =>
-      true
-    | _ => false
-    };
+    drop_target != NoTarget
+    && drop_target == this_target
+    && (
+      switch (carry, Path.cell_idx(exp_path)) {
+      | (WordPat({form: Some(Var(_)), path, _}), Some(exp_idx))
+          when Path.is_cell_idx((>)(exp_idx), path) =>
+        true
+      | (WordExp(_) | WordBrush(_), _) => true
+      | _ => false
+      }
+    );
   div(
     [
       Attr.classes(
         ["word-separator"] @ (is_drop_target ? ["active-drop-target"] : []),
       ),
       Attr.on_click(_ => stop(inject(InsertNewWord(exp_path, idx)))),
-      Attr.on("drop", _ => stop(inject(DropReorderWord(exp_path, idx)))),
+      Attr.on("drop", _ => stop(inject(DropOnWordSep(exp_path, idx)))),
       Attr.on("dragover", _ => Event.Prevent_default),
       Attr.on("dragenter", _ =>
         prevent(inject(SetDropTarget(this_target)))

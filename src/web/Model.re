@@ -33,7 +33,8 @@ type drop_target =
 [@deriving sexp]
 type carry =
   | NoCarry
-  | Word(Path.t)
+  | WordExp(AnnotatedBlock.annotated_word_exp)
+  | WordPat(AnnotatedBlock.annotated_word_pat)
   | WordBrush(Word.t)
   | Cell(Path.t)
   | CellBrush(Cell.t);
