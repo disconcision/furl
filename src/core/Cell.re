@@ -34,5 +34,5 @@ let update_word: (string => string, int, Word.s) => Word.s =
 
 let init: 'a => t =
   () => {
-    {pattern: [Word.get_name()], expression: [Word.empty], value: ["?"]};
+    {pattern: [Word.mk()], expression: [Word.empty], value: ["?"]};
   };

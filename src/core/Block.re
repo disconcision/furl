@@ -7,6 +7,7 @@ type t = Cell.s;
 type cell_id = int;
 
 let nth_cell: (t, cell_id) => Cell.t = List.nth;
+let len = List.length;
 
 let update_cell: (t, int, Cell.t => Cell.t) => t =
   (block, cell_idx, f) =>

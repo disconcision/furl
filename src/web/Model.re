@@ -4,46 +4,50 @@ let cutoff = (===);
 
 [@deriving sexp]
 type focus =
-  //TODO: revisit
   | SingleCell(Path.t);
 
 [@deriving sexp]
-type cell_proj =
-  //| PatternOnly
-  //| ValueOnly
-  //| ExpressionPatternValue
-  | ExpressionPattern;
-
+type word_sep_id = int;
 [@deriving sexp]
 type cell_sep_id = int;
 
-//TODO: refactor to use path
+//TODO: refactor paths
 [@deriving sexp]
 type word_path = (Block.cell_id, Cell.field, Cell.word_idx);
-[@deriving sexp]
-type word_sep_path = word_path;
-[@deriving sexp]
-type word_sep_id = int;
+//[@deriving sexp]
+//type char_path = (Block.cell_id, Cell.field, Cell.word_idx, int);
+
+type new_path =
+  | BlockPath
+  | CellPath(Block.cell_id)
+  | WordPath(word_path);
+//| CharPath(char_path);
 
 [@deriving sexp]
 type drop_target =
   | NoTarget
   | Word(word_path)
-  | WordSeparator(word_sep_path)
-  | CellSepatator(int);
+  | WordSeparator(word_path)
+  | CellSepatator(cell_sep_id);
 
 [@deriving sexp]
 type carry =
-  | Nothing
+  | NoCarry
   | Word(Path.t)
   | WordBrush(Word.t)
   | Cell(Path.t)
   | CellBrush(Cell.t);
 
 [@deriving sexp]
+type trash_idx = int;
+
+[@deriving sexp]
+type screen_coords = (int, int);
+
+[@deriving sexp]
 type trash_item =
-  | TrashedCell(Cell.t, (int, int))
-  | TrashedWord(Word.t, (int, int));
+  | TrashedCell(Cell.t, screen_coords)
+  | TrashedWord(Word.t, screen_coords);
 
 [@deriving sexp]
 type trash = list(trash_item);
@@ -52,6 +56,13 @@ type trash = list(trash_item);
 type pattern_display =
   | Name
   | Emoji;
+
+[@deriving sexp]
+type cell_proj =
+  //| PatternOnly
+  //| ValueOnly
+  //| ExpressionPatternValue
+  | ExpressionPattern;
 
 [@deriving sexp]
 type keymap = {
@@ -72,50 +83,29 @@ type t = {
   animtest: bool,
 };
 
-let init_world: Block.t = [
-  {
-    pattern: ["bro"],
-    expression: ["sum", "77", "5", "123"],
-    value: ["205"],
-  },
-  {pattern: ["greeze"], expression: ["fact", "5"], value: ["120"]},
-  {
-    pattern: ["cloun"],
-    expression: ["prod", "bro", "greeze"],
-    value: ["24600"],
-  },
-  {
-    pattern: ["foob"],
-    expression: ["112", "+", "813", "+", "bro"],
-    value: ["1135"],
-  },
-];
-let init_path: Path.t = [
-  Cell(Index(0, 4)),
-  Field(Expression),
-  Word(Index(0, 4)),
-  Char(Index(0, 3)),
-];
+let world = World.init;
 
-assert(Path.is_valid(init_world, init_path));
+let init_path: Path.t =
+  Lens.[
+    Cell(Index(0, Block.len(world))),
+    Field(Expression),
+    Word(Index(0, first_exp_len(world))),
+    Char(Index(0, first_word_len(world))),
+  ];
 
-print_endline(
-  Sexplib.Sexp.to_string_hum(
-    AnnotatedBlock.sexp_of_annotated_block(AnnotatedBlock.mk(init_world)),
-  ),
-);
+assert(Path.is_valid(world, init_path));
 
 let init = {
-  world: init_world,
-  cell_proj: ExpressionPattern,
+  world,
   focus: SingleCell(init_path),
-  carry: Nothing,
+  carry: NoCarry,
   drop_target: NoTarget,
   trash: [],
-  pattern_display: Name,
   keymap: {
     shift: false,
     ctrl: false,
   },
+  pattern_display: Name,
   animtest: false,
+  cell_proj: ExpressionPattern,
 };

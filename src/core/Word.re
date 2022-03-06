@@ -69,7 +69,7 @@ let emoji_of_default: string => string =
   | "fact" => "fact"
   | _ => "🤔";
 
-let get_name = (): string => {
+let mk = (): string => {
   let i = running_index^;
   running_index := running_index^ + 1;
   List.nth(running_names, i mod List.length(running_names));

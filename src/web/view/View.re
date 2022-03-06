@@ -268,7 +268,7 @@ let word_sep_view =
         ["word-separator"] @ (is_drop_target ? ["active-drop-target"] : []),
       ),
       Attr.on_click(_ => stop(inject(InsertNewWord(exp_path, idx)))),
-      Attr.on("drop", _ => stop(inject(DropInsertWord(exp_path, idx)))),
+      Attr.on("drop", _ => stop(inject(DropReorderWord(exp_path, idx)))),
       Attr.on("dragover", _ => Event.Prevent_default),
       Attr.on("dragenter", _ =>
         prevent(inject(SetDropTarget(this_target)))
@@ -481,7 +481,7 @@ let view = (~inject, ~model: Model.t) => {
     | _ => "on-path"
     };
   let trash_carry = evt =>
-    inject(AddCarryToTrash((evt##.clientX, evt##.clientY)));
+    inject(TrashCarry((evt##.clientX, evt##.clientY)));
   let focus_root = _ => inject(SetFocus(SingleCell([])));
   div(
     [Attr.class_(block_class)]

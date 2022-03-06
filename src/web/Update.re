@@ -37,14 +37,14 @@ type t =
   | SwapCells(Block.cell_id, Block.cell_id)
   // drag-n-drop
   | Pickup(Model.carry)
-  | DropReplaceWord(Path.t)
   | SetDropTarget(Model.drop_target)
-  | DropInsertWord(Path.t, Model.word_sep_id)
+  | DropReplaceWord(Path.t)
+  | DropReorderWord(Path.t, Model.word_sep_id)
   | DropReorderCell(Model.cell_sep_id)
   | DeleteCarrySource
   // trash
-  | PickupTrash(int)
-  | AddCarryToTrash((int, int))
+  | TrashCarry(Model.screen_coords)
+  | PickupTrash(Model.trash_idx)
   | EmptyTrash;
 
 let update_focus = (f, {focus, _} as model: Model.t) => {
@@ -113,13 +113,13 @@ let rec apply: (Model.t, t, unit, ~schedule_action: 'a) => Model.t =
         }
       | DeleteCarrySource =>
         switch (model.carry) {
-        | Nothing
+        | NoCarry
         | WordBrush(_)
         | CellBrush(_) => model
         | Word(path)
         | Cell(path) => app(Delete(path), model)
         }
-      | AddCarryToTrash(coords) =>
+      | TrashCarry(coords) =>
         switch (model.carry) {
         | Word(path) =>
           let word =
@@ -162,24 +162,24 @@ let rec apply: (Model.t, t, unit, ~schedule_action: 'a) => Model.t =
         model
         |> app(Delete([Cell(Index(cell_idx, List.length(model.world)))]))
         |> app(InsertCell(new_idx, cell));
-      | DropReorderCell(new_idx) =>
+      | DropReorderCell(sep_idx) =>
         let block = model.world;
         (
           switch (model.carry) {
           | Cell([Cell(Index(carry_idx, _)), ..._]) when model.keymap.shift =>
             let cell = Block.nth_cell(block, carry_idx);
-            app(InsertCell(new_idx, cell), model);
+            app(InsertCell(sep_idx, cell), model);
           | Cell([Cell(Index(carry_idx, _)), ..._]) =>
             let cell = Block.nth_cell(block, carry_idx);
-            let new_idx = new_idx > carry_idx ? new_idx - 1 : new_idx;
+            let new_idx = sep_idx > carry_idx ? sep_idx - 1 : sep_idx;
             model
             |> app(Delete([Cell(Index(carry_idx, List.length(block)))]))
             |> app(InsertCell(new_idx, cell));
-          | CellBrush(cell) => app(InsertCell(new_idx, cell), model)
+          | CellBrush(cell) => app(InsertCell(sep_idx, cell), model)
           | _ => model
           }
         )
-        |> app(Pickup(Nothing));
+        |> app(Pickup(NoCarry));
       | InsertWord(path, sep_idx, new_word) =>
         let m =
           update_world(Path.insert_word(new_word, path, sep_idx), model);
@@ -199,7 +199,7 @@ let rec apply: (Model.t, t, unit, ~schedule_action: 'a) => Model.t =
         );
       | InsertNewWord(path, sep_idx) =>
         app(InsertWord(path, sep_idx, Core.Word.empty), model)
-      | DropInsertWord(path, sep_idx) =>
+      | DropReorderWord(path, sep_idx) =>
         (
           switch (model.carry) {
           | Word([_, _, Word(Index(word_idx, _)), ..._] as word_path) =>
@@ -225,7 +225,7 @@ let rec apply: (Model.t, t, unit, ~schedule_action: 'a) => Model.t =
         )
         // hack? sometimes ondragleave doesn't get triggered when dropping
         //|> update_drop_target(_ => NoTarget)
-        |> app(Pickup(Nothing))
+        |> app(Pickup(NoCarry))
       | DropReplaceWord(path) =>
         // TODO: figure out how to combine this with dropinsertword
         switch (path) {
@@ -261,7 +261,7 @@ let rec apply: (Model.t, t, unit, ~schedule_action: 'a) => Model.t =
             | _ => model
             }
           )
-          |> app(Pickup(Nothing))
+          |> app(Pickup(NoCarry))
         | _ => model
         }
       | TogglePatternDisplay =>
