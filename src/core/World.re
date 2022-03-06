@@ -15,6 +15,6 @@ let init: t = [
   {
     pattern: ["foob"],
     expression: ["112", "+", "813", "+", "bro"],
-    value: ["1135"],
+    value: ["1130"],
   },
 ];
