@@ -396,14 +396,26 @@ let cells_view = (~inject, ~model, path: Core.Path.t, cells) => {
   );
 };
 
-let tool_atom_view = (~inject, word): t => {
+let tool_atom_view = (~inject, ~model: Model.t, word): t => {
   div(
     [
-      random_offset(word),
-      Attr.classes(["atom", "toolbar-atom"]),
+      //random_offset(word), //disabled for anim-test
+      //Attr.on_click(_ => stop(inject(Animtest(true)))),
+      Attr.classes(["atom", "toolbar-atom", "tool-anim-test"]),
       Attr.create("draggable", "true"),
+      Attr.create(
+        "style",
+        model.animtest ? "transform: scale(110%)" : "transform: scale(100%)",
+      ),
       Attr.on_mousedown(_ => Event.(Many([Stop_propagation]))),
-      Attr.on_click(_ => stop(inject(UniFocus(UpdateWord(_ => word))))),
+      Attr.on_click(_ =>
+        Event.(
+          Many([
+            stop(inject(UniFocus(UpdateWord(_ => word)))),
+            stop(inject(Animtest(true))),
+          ])
+        )
+      ),
       Attr.on("dragstart", _ => stop(inject(Pickup(WordBrush(word))))),
       Attr.on("dragend", _ => inject(SetDropTarget(NoTarget))),
     ],
@@ -411,12 +423,12 @@ let tool_atom_view = (~inject, word): t => {
   );
 };
 
-let toolbar = (~inject): t =>
+let toolbar = (~inject, ~model): t =>
   div(
-    [Attr.class_("toolbar")],
+    [Attr.classes(["toolbar"])],
     List.map(
-      tool_atom_view(~inject),
-      ["fact", "sum", "prod", "+", "*", "0", "1", "1337"],
+      tool_atom_view(~inject, ~model),
+      ["sum", "prod", "fact", "1337", "0", "1", "+", "*"],
     ),
   );
 
@@ -489,7 +501,7 @@ let view = (~inject, {world, focus, _} as model: Model.t) => {
     [
       trash_panel(~inject),
       cell_control_panel(~inject),
-      toolbar(~inject),
+      toolbar(~inject, ~model),
       title_view(model, ~inject),
       cells_view(~inject, ~model, path, cells),
       trash_view(model, ~inject),

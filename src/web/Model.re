@@ -69,6 +69,7 @@ type t = {
   carry,
   pattern_display,
   keymap,
+  animtest: bool,
 };
 
 let init_world: Block.t = [
@@ -116,4 +117,5 @@ let init = {
     shift: false,
     ctrl: false,
   },
+  animtest: false,
 };

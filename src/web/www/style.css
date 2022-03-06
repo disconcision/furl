@@ -344,13 +344,21 @@ body {
 }
 
 .toolbar {
+  position: relative;
+  top: -1em;
   background-color: #c4b4ff55;
-  transform: skew(-13deg, 1deg);
+  transform: skew(-11deg, 1deg);
   display: flex;
-  gap: 1em;
+  flex-wrap: wrap;
+  gap: 0.5em;
+  border-radius: 1em 0 1em 0;
+  padding: 0.2em;
   float: right;
   color: #bdfff6;
   text-shadow: 1px 1px #fe19b9;
+  width: 9em;
+  justify-content: space-around;
+  box-shadow: -1px -1px 0px 0px #d9f5f9, 1px 1px 0px 0px #e3b9f1;
 }
 
 .toolbar-atom:hover {
@@ -382,9 +390,15 @@ body {
   top: 0.7em;
   left: 2.5em;
   cursor: pointer;
+  color: #f56197;
 }
 
 .cell-control-panel:hover {
   transform: rotate(35deg);
   text-shadow: 9px 4px yellow;
+}
+
+.tool-anim-test  {
+  position: relative;
+  transition: all 0.1s;
 }

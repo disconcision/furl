@@ -19,6 +19,7 @@ type single_focus_action =
 
 [@deriving sexp]
 type t =
+  | Animtest(bool)
   | SetFocus(Model.focus)
   | UniFocus(single_focus_action)
   | Delete(Path.t)
@@ -87,6 +88,7 @@ let rec apply: (Model.t, t, unit, ~schedule_action: 'a) => Model.t =
     let app = (a, m) => apply(m, a, state, ~schedule_action);
     let model =
       switch (update) {
+      | Animtest(_b) => {...model, animtest: !model.animtest}
       | SetFocus(focus) => update_focus(_ => focus, model)
       | Pickup(thing) => update_carry(_ => thing, model)
       | EmptyTrash => update_trash(_ => [], model)
