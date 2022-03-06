@@ -7,22 +7,24 @@ module App = {
   module Action = Update;
   module State = State;
 
-  let observe_font_specimen = (id, update) =>
-    ResizeObserver.observe(
-      ~node=JsUtil.get_elem_by_id(id),
-      ~f=
-        (entries, _) => {
-          let specimen = Js.to_array(entries)[0];
-          let rect = specimen##.contentRect;
-          update(
-            Web.FontMetrics.{
-              row_height: rect##.bottom -. rect##.top,
-              col_width: rect##.right -. rect##.left,
-            },
-          );
-        },
-      (),
-    );
+  /*
+   let observe_font_specimen = (id, update) =>
+     ResizeObserver.observe(
+       ~node=JsUtil.get_elem_by_id(id),
+       ~f=
+         (entries, _) => {
+           let specimen = Js.to_array(entries)[0];
+           let rect = specimen##.contentRect;
+           update(
+             Web.FontMetrics.{
+               row_height: rect##.bottom -. rect##.top,
+               col_width: rect##.right -. rect##.left,
+             },
+           );
+         },
+       (),
+     );
+     */
 
   let on_startup = (~schedule_action as _, _) => {
     /*
@@ -47,7 +49,6 @@ module App = {
     open Incr.Let_syntax;
     let%map model = model;
     Component.create(
-      //~apply_action=Web.Update.apply(model),
       ~apply_action=Web.Update.apply(model),
       /*
        ~on_display=
@@ -57,8 +58,7 @@ module App = {
          },
          */
       model,
-      //Web.Page.view(~inject, model),
-      Web.View.view(~inject, model),
+      Web.View.view(~inject, ~model),
     );
   };
 };

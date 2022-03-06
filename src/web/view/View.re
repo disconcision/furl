@@ -1,9 +1,10 @@
 open Update;
+open Core;
 open ViewUtil;
 open Virtual_dom.Vdom;
 open Virtual_dom.Vdom.Node;
 
-let atom_focus_class: option(Core.Path.t) => string =
+let atom_focus_class: option(Path.t) => string =
   path =>
     switch (path) {
     | None => "unfocussed"
@@ -11,7 +12,7 @@ let atom_focus_class: option(Core.Path.t) => string =
     | Some(_) => "on-path"
     };
 
-let exp_atom_class: Core.Expression.atom => string =
+let exp_atom_class: Expression.atom => string =
   fun
   | Lit(_) => "exp-atom-lit"
   | Var(_) => "exp-atom-var"
@@ -19,7 +20,7 @@ let exp_atom_class: Core.Expression.atom => string =
   | Operator(_) => "exp-atom-operator"
   | Formless(_) => "exp-atom-formless";
 
-let pat_atom_classes: option(Core.Pattern.atom) => list(string) =
+let pat_atom_classes: option(Pattern.atom) => list(string) =
   fun
   | Some(Lit(_)) => ["pat-atom-lit"]
   | Some(Var(_, uses)) => {
@@ -33,32 +34,38 @@ let pat_atom_classes: option(Core.Pattern.atom) => list(string) =
     }
   | _ => ["pat-atom-formless"];
 
-let expression_class: Core.Expression.form => string =
+let expression_class: Expression.form => string =
   fun
   | Atom(_) => "expr-singleton"
   | App(_) => "expr-app"
   | Seq(_) => "expr-seq"
   | _ => "expr-unknown";
 
-let pattern_class: option(Core.Pattern.form) => string =
+let pattern_class: option(Pattern.form) => string =
   fun
   | Some(Atom(_)) => "pat-singleton"
   | _ => "pat-unknown";
 
-let core_word_view: (Model.pattern_display, Core.Word.t) => t =
+let core_word_view: (Model.pattern_display, Word.t) => t =
   (pattern_display, word) =>
     switch (pattern_display) {
-    | Emoji => text(Core.Word.emoji_of_default(word))
+    | Emoji => text(Word.emoji_of_default(word))
     | Name => text(word)
     };
 
 let set_focus = (this_path, inject, _evt) =>
   stop(inject(SetFocus(SingleCell(this_path))));
 
+let focus_word = (path: option(Path.t), i: int): option(Path.t) =>
+  switch (path) {
+  | Some(path) => Path.focus_word(path, i)
+  | None => None
+  };
+
 let exp_atom_view =
     (
-      {word, path: this_path, form, _}: Core.AnnotatedBlock.annotated_word_exp,
-      ~path: option(Core.Path.t),
+      {word, path: this_path, form, _}: AnnotatedBlock.annotated_word_exp,
+      ~path: option(Path.t),
       ~inject,
       ~model: Model.t,
     )
@@ -118,8 +125,8 @@ let exp_atom_view =
 
 let pat_atom_view =
     (
-      {word, path: this_path, form, _}: Core.AnnotatedBlock.annotated_word_pat,
-      ~path: option(Core.Path.t),
+      {word, path: this_path, form, _}: AnnotatedBlock.annotated_word_pat,
+      ~path: option(Path.t),
       ~inject,
       ~model: Model.t,
     )
@@ -155,8 +162,8 @@ let pat_atom_view =
 
 let val_atom_view =
     (
-      {word, path: this_path, _}: Core.AnnotatedBlock.annotated_word,
-      ~path: option(Core.Path.t),
+      {word, path: this_path, _}: AnnotatedBlock.annotated_word,
+      ~path: option(Path.t),
       ~inject,
     )
     : t =>
@@ -169,17 +176,10 @@ let val_atom_view =
     [text(word)],
   );
 
-let get_focus = (path: option(Core.Path.t), i: int): option(Core.Path.t) =>
-  switch (path) {
-  | Some([Word(Index(idx, _)), ...subpath]) =>
-    i == idx ? Some(subpath) : None
-  | _ => None
-  };
-
 let pattern_view =
     (
-      {words, path: _, form, _}: Core.AnnotatedBlock.annotated_pat,
-      ~path: option(Core.Path.t),
+      {words, path: _, form, _}: AnnotatedBlock.annotated_pat,
+      ~path: option(Path.t),
       ~inject,
       ~model,
     ) => {
@@ -193,7 +193,7 @@ let pattern_view =
     ],
     List.mapi(
       (idx, word) =>
-        pat_atom_view(word, ~path=get_focus(path, idx), ~inject, ~model),
+        pat_atom_view(word, ~path=focus_word(path, idx), ~inject, ~model),
       words,
     ),
   );
@@ -201,22 +201,22 @@ let pattern_view =
 
 let value_view =
     (
-      {words, path: _}: Core.AnnotatedBlock.annotated_field,
-      ~path: option(Core.Path.t),
+      {words, path: _}: AnnotatedBlock.annotated_field,
+      ~path: option(Path.t),
       ~inject,
     ) => {
   div(
     [Attr.classes(["value-view", atom_focus_class(path)])],
     List.mapi(
       (idx, word) =>
-        val_atom_view(word, ~path=get_focus(path, idx), ~inject),
+        val_atom_view(word, ~path=focus_word(path, idx), ~inject),
       words,
     ),
   );
 };
 
 let cell_sep_view =
-    (~inject, {drop_target, carry, _} as _model: Model.t, cell_idx) => {
+    (~inject, ~model as {drop_target, carry, _}: Model.t, cell_idx) => {
   let this_target: Model.drop_target = CellSepatator(cell_idx);
   let is_drop_target =
     switch (carry) {
@@ -244,9 +244,9 @@ let cell_sep_view =
 
 let word_sep_view =
     (
-      inject,
-      exp_path: Core.Path.t,
-      {drop_target, carry, _} as _model: Model.t,
+      ~inject,
+      ~model as {drop_target, carry, _}: Model.t,
+      exp_path: Path.t,
       idx,
     ) => {
   let this_target: Model.drop_target =
@@ -281,21 +281,21 @@ let word_sep_view =
 
 let expression_view =
     (
-      {words, path: path_this, form, _}: Core.AnnotatedBlock.annotated_exp,
-      ~path: option(Core.Path.t),
+      {words, path: path_this, form, _}: AnnotatedBlock.annotated_exp,
+      ~path: option(Path.t),
       ~inject,
       ~model,
     ) => {
   let word_views =
     List.mapi(
       (idx, word) =>
-        exp_atom_view(word, ~path=get_focus(path, idx), ~inject, ~model),
+        exp_atom_view(word, ~path=focus_word(path, idx), ~inject, ~model),
       words,
     );
   let sep_views =
     List.init(
       List.length(word_views) + 1,
-      word_sep_view(inject, path_this, model),
+      word_sep_view(~inject, ~model, path_this),
     );
   let views = Util.ListUtil.interleave(sep_views, word_views);
   div(
@@ -313,10 +313,10 @@ let expression_view =
 let cell_view =
     (
       ~inject,
-      {path: this_path, expression, pattern, value, _}: Core.AnnotatedBlock.annotated_cell,
-      ~path: option(Core.Path.t),
+      ~model,
+      ~path: option(Path.t),
+      {path: this_path, expression, pattern, value, _}: AnnotatedBlock.annotated_cell,
       idx,
-      model: Model.t,
     )
     : t => {
   let cell_class =
@@ -359,7 +359,7 @@ let cell_view =
   );
 };
 
-let title_view = (_model: Model.t, ~inject as _) =>
+let title_view = (~model as _, ~inject as _) =>
   div(
     [
       Attr.class_("title"),
@@ -374,21 +374,16 @@ let title_view = (_model: Model.t, ~inject as _) =>
     ],
   );
 
-let cells_view = (~inject, ~model, path: Core.Path.t, cells) => {
-  let get_focus = (i: int): option(Core.Path.t) =>
-    switch (path) {
-    | [] => None
-    | [Cell(Index(idx, _)), ...subpath] => i == idx ? Some(subpath) : None
-    | _ => failwith("View.cells_view impossible")
-    };
+let cells_view = (~inject, ~model, ~path: Path.t, cells) => {
+  let focus = Path.focus_cell(path);
   let cell_views =
     List.mapi(
       (idx, cell) =>
-        cell_view(~inject, cell, ~path=get_focus(idx), idx, model),
+        cell_view(~inject, ~model, ~path=focus(idx), cell, idx),
       cells,
     );
   let sep_views =
-    List.init(List.length(cell_views) + 1, cell_sep_view(~inject, model));
+    List.init(List.length(cell_views) + 1, cell_sep_view(~inject, ~model));
   let views = Util.ListUtil.interleave(sep_views, cell_views);
   div(
     [Attr.class_("cells-view"), Attr.on("drop", _ => stop(Event.Ignore))],
@@ -457,7 +452,7 @@ let trash_item_view = (~inject, trash_idx, item) => {
   );
 };
 
-let trash_view = (~inject, {trash, _}: Model.t) => {
+let trash_view = (~inject, ~model as {trash, _}: Model.t) => {
   div([Attr.class_("trash")], List.mapi(trash_item_view(~inject), trash));
 };
 
@@ -476,10 +471,10 @@ let cell_control_panel = (~inject) =>
     [text("P")],
   );
 
-let view = (~inject, {world, focus, _} as model: Model.t) => {
-  let {cells, _}: Core.AnnotatedBlock.annotated_block =
-    Core.AnnotatedBlock.mk(world);
-  let SingleCell(path) = focus;
+let view = (~inject, ~model: Model.t) => {
+  let {cells, _}: AnnotatedBlock.annotated_block =
+    AnnotatedBlock.mk(model.world);
+  let SingleCell(path) = model.focus;
   let block_class =
     switch (path) {
     | [] => "focussed"
@@ -502,9 +497,9 @@ let view = (~inject, {world, focus, _} as model: Model.t) => {
       trash_panel(~inject),
       cell_control_panel(~inject),
       toolbar(~inject, ~model),
-      title_view(model, ~inject),
-      cells_view(~inject, ~model, path, cells),
-      trash_view(model, ~inject),
+      title_view(~inject, ~model),
+      cells_view(~inject, ~model, ~path, cells),
+      trash_view(~inject, ~model),
     ],
   );
 };

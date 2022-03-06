@@ -279,3 +279,21 @@ let insert_word: (Word.t, t, int, Block.t) => Block.t =
     };
 
 let insert_cell: (int, Cell.t, Block.t) => Block.t = Util.ListUtil.insert_at;
+
+/* FOCUSING
+     these functions are used to focus down a subpath for a specific cell or word or whatever
+   */
+
+let focus_word = (path: t, word_idx: Cell.word_idx): option(t) =>
+  switch (path) {
+  | [Word(Index(idx, _)), ...subpath] =>
+    word_idx == idx ? Some(subpath) : None
+  | _ => None
+  };
+
+let focus_cell = (path: t, cell_idx: Block.cell_id): option(t) =>
+  switch (path) {
+  | [Cell(Index(idx, _)), ...subpath] =>
+    cell_idx == idx ? Some(subpath) : None
+  | _ => None
+  };
