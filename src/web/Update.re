@@ -223,6 +223,9 @@ let rec apply: (Model.t, t, unit, ~schedule_action: 'a) => Model.t =
       | DropOnWordSep(path, sep_idx) =>
         (
           switch (model.carry) {
+          | _ when Path.is_word_sep_touching_empty(path, sep_idx, model.world) =>
+            // HACK? annoying to allow drop if next to empty word
+            model
           | WordPat({path: origin_path, word, _}) =>
             switch (Path.cell_idx(path)) {
             | Some(target_cell_idx)

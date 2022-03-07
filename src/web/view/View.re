@@ -255,7 +255,7 @@ let cell_sep_view =
 let word_sep_view =
     (
       ~inject,
-      ~model as {drop_target, carry, _}: Model.t,
+      ~model as {drop_target, carry, world, _}: Model.t,
       exp_path: Path.t,
       idx,
     ) => {
@@ -265,8 +265,13 @@ let word_sep_view =
       WordSeparator((cell_idx, f, idx))
     | _ => NoTarget
     };
+  /*
+   for separator at index idx, check if words at idx-1 and idx are empty
+    */
+
   let is_drop_target =
-    drop_target != NoTarget
+    !Path.is_word_sep_touching_empty(exp_path, idx, world)
+    && drop_target != NoTarget
     && drop_target == this_target
     && (
       switch (carry, Path.cell_idx(exp_path)) {

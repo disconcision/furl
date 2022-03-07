@@ -222,6 +222,12 @@ let is_a_next_word = (block, path: t) =>
   | _ => false
   };
 
+let is_word_p = (p, block, path: t) =>
+  switch (get_word(path, block)) {
+  | Some(op) when p(op) => true
+  | _ => false
+  };
+
 let is_next_word_p = (p, block, path: t) =>
   switch (next_word(block, path)) {
   | Some(op) when p(op) => true
@@ -319,3 +325,18 @@ let focus_cell = (path: t, cell_idx: Block.cell_id): option(t) =>
     cell_idx == idx ? Some(subpath) : None
   | _ => None
   };
+
+let is_word_sep_touching_empty = (exp_path, sep_idx, block) => {
+  let prev_path = exp_path @ [Word(Index(sep_idx - 1, 666))];
+  let next_path = exp_path @ [Word(Index(sep_idx, 666))];
+  (
+    try(is_word_p((==)(Word.empty), block, prev_path)) {
+    | _ => false
+    }
+  )
+  || (
+    try(is_word_p((==)(Word.empty), block, next_path)) {
+    | _ => false
+    }
+  );
+};
