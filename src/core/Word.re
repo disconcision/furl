@@ -11,7 +11,7 @@ let var_regex =
   Re.Str.regexp("^\\([a-zA-Z]\\|_[_a-zA-Z0-9]\\)[_a-zA-Z0-9']*$");
 let is_valid_var = s => Re.Str.string_match(var_regex, s, 0);
 
-let running_index = ref(4);
+let running_index = ref(0);
 
 let running_names = [
   "bro",

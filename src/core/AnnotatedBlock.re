@@ -61,6 +61,7 @@ type annotated_cell = {
   pattern: annotated_pat,
   expression: annotated_exp,
   value: annotated_field,
+  uid: Cell.uid,
 };
 
 [@deriving sexp]
@@ -143,7 +144,7 @@ let get_bound_exp_vars: annotated_exp => Path.ctx =
     |> List.map(({path, word, _}) => (word, path));
 
 let annotate_cell: (Path.ctx, Path.t, int, int, Cell.t) => annotated_cell =
-  (context, path, length, idx, {pattern, expression, value}) => {
+  (context, path, length, idx, {pattern, expression, value, uid}) => {
     let path = path @ [Cell(Index(idx, length))];
     let pattern = annotate_pat(path @ [Field(Pattern)], pattern);
     let expression =
@@ -161,6 +162,7 @@ let annotate_cell: (Path.ctx, Path.t, int, int, Cell.t) => annotated_cell =
       pattern,
       expression,
       value,
+      uid,
     };
   };
 

@@ -50,7 +50,7 @@ let run_block: Block.t => Block.t =
     List.fold_left(
       (
         (block_acc: Block.t, env_acc: env),
-        {pattern, expression, _}: AnnotatedBlock.annotated_cell,
+        {pattern, expression, uid, _}: AnnotatedBlock.annotated_cell,
       ) => {
         let parsed_exp = expression.form;
         let result = eval_expression(parsed_exp, env_acc);
@@ -76,7 +76,7 @@ let run_block: Block.t => Block.t =
             ({word, _}: AnnotatedBlock.annotated_word_exp) => word,
             expression.words,
           );
-        let new_cell: Cell.t = {pattern, expression, value};
+        let new_cell: Cell.t = {pattern, expression, value, uid};
         let new_block = block_acc @ [new_cell];
         (new_block, new_env);
       },
