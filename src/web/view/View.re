@@ -20,26 +20,14 @@ let title_view = (~model as _, ~inject as _) =>
     ],
   );
 
-let tool_atom_view = (~inject, ~model: Model.t, word): t => {
+let tool_atom_view = (~inject, ~model as _: Model.t, word): t => {
   div(
     [
-      //random_offset(word), //disabled for anim-test
-      //Attr.on_click(_ => stop(inject(Animtest(true)))),
-      Attr.classes(["atom", "toolbar-atom", "tool-anim-test"]),
+      random_offset(word),
+      Attr.classes(["atom", "toolbar-atom"]),
       Attr.create("draggable", "true"),
-      Attr.create(
-        "style",
-        model.animtest ? "transform: scale(110%)" : "transform: scale(100%)",
-      ),
       Attr.on_mousedown(_ => Event.(Many([Stop_propagation]))),
-      Attr.on_click(_ =>
-        Event.(
-          Many([
-            stop(inject(UniFocus(UpdateWord(_ => word)))),
-            stop(inject(Animtest(true))),
-          ])
-        )
-      ),
+      Attr.on_click(_ => stop(inject(UniFocus(UpdateWord(_ => word))))),
       Attr.on("dragstart", _ => stop(inject(Pickup(WordBrush(word))))),
       Attr.on("dragend", _ => inject(SetDropTarget(NoTarget))),
     ],

@@ -397,8 +397,3 @@ body {
   transform: rotate(35deg);
   text-shadow: 9px 4px yellow;
 }
-
-.tool-anim-test  {
-  position: relative;
-  transition: all 0.1s;
-}

@@ -81,8 +81,6 @@ type t = {
   carry,
   pattern_display,
   keymap,
-  animtest: bool,
-  test_coords: screen_coords,
 };
 
 let world = World.init;
@@ -108,7 +106,5 @@ let init = {
     ctrl: false,
   },
   pattern_display: Name,
-  animtest: false,
   cell_proj: ExpressionPattern,
-  test_coords: (0, 0),
 };
