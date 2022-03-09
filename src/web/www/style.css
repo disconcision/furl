@@ -414,3 +414,7 @@ body {
   transform: rotate(35deg);
   text-shadow: 9px 4px yellow;
 }
+
+.panel-off {
+  opacity: 21%;
+}

@@ -72,28 +72,29 @@ let trash_item_view = (~inj, trash_idx, item) => {
 let trash_view = (~inj, ~model as {trash, _}: Model.t) =>
   div([Attr.class_("trash")], List.mapi(trash_item_view(~inj), trash));
 
-let trash_panel = (~inj) =>
-  div(
-    [Attr.class_("trash-panel"), Attr.on_click(_ => inj(EmptyTrash))],
-    [text("🗑️")],
-  );
-
-let cell_control_panel = (~inj) =>
+let toggle_panel = (name, icon, action, ~inj, is_off) =>
   div(
     [
-      Attr.class_("cell-control-panel"),
+      Attr.classes([name] @ (is_off ? ["panel-off"] : [])),
+      Attr.on_click(_ => inj(action)),
+    ],
+    [text(icon)],
+  );
+
+let trash_panel = toggle_panel("trash-panel", "🗑", EmptyTrash);
+let anim_control_panel =
+  toggle_panel("anim-control-panel", "🎬", ToggleAnimations);
+
+let cell_control_panel = (~inj, pattern_display) =>
+  div(
+    [
+      Attr.classes(
+        ["cell-control-panel"]
+        @ (pattern_display == Model.Emoji ? ["panel-off"] : []),
+      ),
       Attr.on_click(_ => inj(TogglePatternDisplay)),
     ],
     [text("P")],
-  );
-
-let anim_control_panel = (~inj) =>
-  div(
-    [
-      Attr.class_("anim-control-panel"),
-      Attr.on_click(_ => inj(ToggleAnimations)),
-    ],
-    [text("🎬")],
   );
 
 let view = (~inj, ~model: Model.t) => {
@@ -118,9 +119,9 @@ let view = (~inj, ~model: Model.t) => {
       ...Keyboard.handlers(~inj, model),
     ],
     [
-      trash_panel(~inj),
-      anim_control_panel(~inj),
-      cell_control_panel(~inj),
+      trash_panel(~inj, model.trash == []),
+      anim_control_panel(~inj, model.animations_off),
+      cell_control_panel(~inj, model.pattern_display),
       toolbar(~inj, ~model),
       title_view(~inj, ~model),
       BlockView.view(~inj, ~model, ~path, cells),
@@ -132,20 +133,12 @@ let view = (~inj, ~model: Model.t) => {
 /*
   TODO: styling
 
-  - expressions (context-free):
-    - application: background color
-    DONE - application: first word: color
-    DONE - operators: background color, color
-    DONE - word: invalid: color, box, add '?'
   - expressions (context-sensitive):
-    DONE - word: unbound: color, box, add '?'
     - operators: adjacent-to-bad-word: opacity
   - expressions (fancy-semantic)
     - word: type-mismatch: color
 
   - patterns (context-sensitive)
-    DONE - word: invalid: color, box, add '?'
-    DONE - word: var: {unused, 1-use, 2+uses}: color
     - word: var: starred: color (same as 2+uses)
 
   - values (context-free)
