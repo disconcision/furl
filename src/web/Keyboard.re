@@ -4,8 +4,8 @@ let keydown = (model: Model.t, key: string): list(Update.t) =>
   switch (key) {
   | "F3" => [DebugPrint]
   | "Shift" => [UpdateKeymap(km => {...km, shift: true})]
-  | "ArrowDown" when model.keymap.shift => [UniFocus(SwapCellDown)]
-  | "ArrowUp" when model.keymap.shift => [UniFocus(SwapCellUp)]
+  | "ArrowDown" when !model.keymap.shift => [UniFocus(SwapCellDown)]
+  | "ArrowUp" when !model.keymap.shift => [UniFocus(SwapCellUp)]
   | "ArrowRight" => [UniFocus(MoveRight)]
   | "ArrowLeft" => [UniFocus(MoveLeft)]
   | "ArrowUp" => [UniFocus(MoveUp)]

@@ -82,7 +82,7 @@ let update_keymap = (f, {keymap, _} as model: Model.t) => {
   keymap: f(keymap),
 };
 
-let rec apply: (Model.t, t, unit, ~schedule_action: 'a) => Model.t =
+let rec apply: (Model.t, t, 'b, ~schedule_action: 'a) => Model.t =
   (model: Model.t, update: t, state: State.t, ~schedule_action) => {
     //let model = update_drop_target(_ => NoTarget, model);
     let app = (a, m) => apply(m, a, state, ~schedule_action);
@@ -331,7 +331,7 @@ let rec apply: (Model.t, t, unit, ~schedule_action: 'a) => Model.t =
   }
 
 and apply_single:
-  (single_focus_action, Model.t, unit, ~schedule_action: 'a) => Model.t =
+  (single_focus_action, Model.t, 'b, ~schedule_action: 'a) => Model.t =
   (a, model, state, ~schedule_action) => {
     let SingleCell(current_path) = model.focus;
     let app = (a, m) => apply(m, a, state, ~schedule_action);

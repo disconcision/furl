@@ -55,7 +55,7 @@ let cell_view =
       ~inject,
       ~model,
       ~path: option(Path.t),
-      {path: this_path, expression, pattern, value, _}: AnnotatedBlock.annotated_cell,
+      {path: this_path, expression, pattern, value, uid, _}: AnnotatedBlock.annotated_cell,
       idx,
     )
     : t => {
@@ -77,6 +77,7 @@ let cell_view =
   div(
     [
       random_skew(string_of_int(idx)),
+      Attr.id(string_of_int(uid)),
       Attr.classes(["cell-view", cell_focus_class(path)]),
       Attr.on_click(set_focus(this_path, inject)),
       Attr.create("draggable", "true"),
