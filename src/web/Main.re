@@ -37,34 +37,27 @@ let request_frame = c => {
 let set_style = (elem, string) =>
   elem##setAttribute(Js.string("style"), Js.string(string));
 
-let delta_coords = (new_coords, old_coords) =>
-  //state := new_coords;
-  if (old_coords != new_coords && old_coords != init_coords) {
-    let (old_x, old_y) = old_coords;
-    let (new_x, new_y) = new_coords;
-    (old_x - new_x, old_y - new_y);
-  } else {
-    (0, 0);
+let set_style_or_dont = (elem_id, string) =>
+  try(set_style(force_get_elem_by_id(elem_id), string)) {
+  | _ => ()
   };
 
-let set_style1 = ((id, (delta_x, delta_y))) => {
-  let style_str_1 =
-    Printf.sprintf(
-      "transform:translate(%dpx, %dpx); transition: transform 0s;",
-      delta_y,
-      delta_x,
-    );
-  let elem = force_get_elem_by_id(id);
-  set_style(elem, style_str_1);
-  ();
-};
+let delta_coords = ((new_x, new_y), (old_x, old_y)) =>
+  (old_x, old_y) != init_coords ? (old_x - new_x, old_y - new_y) : (0, 0);
 
-let set_style2 = ((id, _)) => {
-  let style_str_2 = "transform:none; transition: transform 200ms; transition-timing-function:ease-out;";
-  let elem = force_get_elem_by_id(id);
-  set_style(elem, style_str_2);
-  ();
-};
+let set_style_init = ((id, (x, y))) =>
+  Printf.sprintf(
+    "transform:translate(%dpx, %dpx); transition: transform 0s;",
+    y,
+    x,
+  )
+  |> set_style_or_dont(id);
+
+let set_style_final = ((id, _)) =>
+  set_style_or_dont(
+    id,
+    "transform:none; transition: transform 200ms ease-out;",
+  );
 
 let on_display = (model, old_model, state: State.t, ~schedule_action as _) =>
   if (model === old_model) {
@@ -72,20 +65,18 @@ let on_display = (model, old_model, state: State.t, ~schedule_action as _) =>
   } else {
     let old_coords = state^;
     let new_coords: Core.Environment.t_((int, int)) =
-      List.map(k => (k, get_coords(k)), init_ids);
+      List.map(id => (id, get_coords(id)), init_ids);
+    state := new_coords;
     let delta_coords: Core.Environment.t_((int, int)) =
       List.map2(
-        ((id_1, old_c), (_, new_c)) => (id_1, delta_coords(new_c, old_c)),
+        ((id, old), (_, nw)) => (id, delta_coords(nw, old)),
         old_coords,
         new_coords,
       );
-    state := new_coords;
+    let _ = List.map(set_style_init, delta_coords);
     request_frame(_ => {
-      let _ = List.map(set_style1, delta_coords);
-      request_frame(_ => {
-        let _ = List.map(set_style2, delta_coords);
-        ();
-      });
+      let _ = List.map(set_style_final, delta_coords);
+      ();
     });
   };
 
