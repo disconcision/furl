@@ -81,6 +81,7 @@ type t = {
   carry,
   pattern_display,
   keymap,
+  anim_targets: list(string),
 };
 
 let world = World.init;
@@ -107,4 +108,5 @@ let init = {
   },
   pattern_display: Name,
   cell_proj: ExpressionPattern,
+  anim_targets: [],
 };

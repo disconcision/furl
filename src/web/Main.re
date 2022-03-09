@@ -2,10 +2,12 @@ open Js_of_ocaml;
 open Incr_dom;
 open Web;
 
+open Sexplib.Std;
+[@deriving sexp]
+type bloo = list((string, (int, int)));
 let init_coords = ((-1), (-1));
 
-let init_ids = ["0", "1", "2", "3"];
-let init_state = List.map(id => (id, init_coords), init_ids);
+let init_state = List.map(id => (id, init_coords), Update.cell_targets_todo);
 let log = x => Js_of_ocaml.Firebug.console##log(x);
 
 let force_get_elem_by_id = id => {
@@ -59,25 +61,30 @@ let set_style_final = ((id, _)) =>
     "transform:none; transition: transform 200ms ease-out;",
   );
 
-let on_display = (model, old_model, state: State.t, ~schedule_action as _) =>
+let flip = (old_coords, new_coords, anim_targets) => {
+  let delta_coords: Core.Environment.t_((int, int)) =
+    List.map2(
+      ((id, old), (_, nw)) => (id, delta_coords(nw, old)),
+      old_coords,
+      new_coords,
+    )
+    |> List.filter(((id, _)) => List.mem(id, anim_targets));
+  //Util.P.p(sexp_of_bloo(delta_coords));
+  List.iter(set_style_init, delta_coords);
+  request_frame(_ => List.iter(set_style_final, delta_coords));
+};
+
+let on_display =
+    (model, old_model, anim_targets, state: State.t, ~schedule_action as _) =>
   if (model === old_model) {
     ();
   } else {
     let old_coords = state^;
-    let new_coords: Core.Environment.t_((int, int)) =
-      List.map(id => (id, get_coords(id)), init_ids);
+    let new_coords = List.map(((i, _)) => (i, get_coords(i)), old_coords);
+    //Util.P.p(sexp_of_bloo(old_coords));
+    //Util.P.p(sexp_of_bloo(new_coords));
     state := new_coords;
-    let delta_coords: Core.Environment.t_((int, int)) =
-      List.map2(
-        ((id, old), (_, nw)) => (id, delta_coords(nw, old)),
-        old_coords,
-        new_coords,
-      );
-    let _ = List.map(set_style_init, delta_coords);
-    request_frame(_ => {
-      let _ = List.map(set_style_final, delta_coords);
-      ();
-    });
+    flip(old_coords, new_coords, anim_targets);
   };
 
 module App = {
@@ -104,7 +111,7 @@ module App = {
      );
      */
 
-  let on_startup = (~schedule_action as _, _) => {
+  let on_startup = (~schedule_action as _, _m: Model.t) => {
     /*
      let _ =
        observe_font_specimen("font-specimen", fm =>
@@ -123,12 +130,17 @@ module App = {
     Async_kernel.Deferred.return(ref(init_state));
   };
 
-  let create = (model1: Incr.t(Web.Model.t), ~old_model, ~inject) => {
+  let create = (model: Incr.t(Web.Model.t), ~old_model, ~inject) => {
     open Incr.Let_syntax;
-    let%map model = model1
+    let%map model = model
     and old_model = old_model;
+    let {anim_targets, _}: Model.t = model;
     Component.create(
-      ~apply_action=Web.Update.apply(model),
+      ~apply_action=
+        (update: Update.t, state: State.t, ~schedule_action) => {
+          let model = Update.update_anim_targets(_ => [], model);
+          Web.Update.apply(model, update, state, ~schedule_action);
+        },
       /*
        ~on_display=
          (_, ~schedule_action as _) => {
@@ -136,9 +148,9 @@ module App = {
            print_endline("on_display");
          },
          */
-      ~on_display=on_display(model, old_model),
+      ~on_display=on_display(model, old_model, anim_targets),
       model,
-      Web.View.view(~inject, ~model),
+      Web.View.view(~inj=inject, ~model),
     );
   };
 };

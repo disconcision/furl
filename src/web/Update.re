@@ -2,6 +2,8 @@ open Sexplib.Std;
 open Util;
 open Core;
 
+let cell_targets_todo = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
+
 [@deriving sexp]
 type single_focus_action =
   | SwapCellDown
@@ -19,6 +21,7 @@ type single_focus_action =
 
 [@deriving sexp]
 type t =
+  | SetAnimTargets(list(string))
   | SetFocus(Model.focus)
   | UniFocus(single_focus_action)
   | Delete(Path.t)
@@ -81,6 +84,11 @@ let update_keymap = (f, {keymap, _} as model: Model.t) => {
   keymap: f(keymap),
 };
 
+let update_anim_targets = (f, {anim_targets, _} as model: Model.t) => {
+  ...model,
+  anim_targets: f(anim_targets),
+};
+
 let rec apply: (Model.t, t, 'b, ~schedule_action: 'a) => Model.t =
   (model: Model.t, update: t, state: State.t, ~schedule_action) => {
     //let model = update_drop_target(_ => NoTarget, model);
@@ -88,12 +96,16 @@ let rec apply: (Model.t, t, 'b, ~schedule_action: 'a) => Model.t =
     let model =
       switch (update) {
       | SetFocus(focus) => update_focus(_ => focus, model)
+      | SetAnimTargets(anim_targets) =>
+        update_anim_targets(_ => anim_targets, model)
       | Pickup(thing) => update_carry(_ => thing, model)
       | EmptyTrash => update_trash(_ => [], model)
       | UpdateKeymap(f) => update_keymap(f, model)
       | SetDropTarget(target) => update_drop_target(_ => target, model)
       | SwapCells(a, b) => update_world(ListUtil.swap(a, b), model)
-      | Delete(path) => update_world(Path.delete(path), model)
+      | Delete(path) =>
+        update_world(Path.delete(path), model)
+        |> app(SetAnimTargets(cell_targets_todo))
       | UpdateWord(path, f) =>
         update_world(Path.update_word(f, path), model)
       | UniFocus(a) => apply_single(a, model, state, ~schedule_action)
@@ -155,6 +167,7 @@ let rec apply: (Model.t, t, 'b, ~schedule_action: 'a) => Model.t =
            )
       | InsertNewCell(sep_idx) =>
         app(InsertCell(sep_idx, Core.Cell.init()), model)
+        |> app(SetAnimTargets(cell_targets_todo))
       | ReorderCell(cell_idx, new_idx) =>
         let cell = Block.nth_cell(model.world, cell_idx);
         let new_idx = new_idx > cell_idx ? new_idx - 1 : new_idx;
@@ -364,6 +377,7 @@ and apply_single:
         model
         |> app(ReorderCell(cell_idx + 1, cell_idx))
         |> app(SetFocus(SingleCell([Cell(Index(cell_idx + 1, k))])))
+        |> app(SetAnimTargets(cell_targets_todo))
       | _ => model
       }
     | SwapCellUp =>
@@ -372,6 +386,7 @@ and apply_single:
         model
         |> app(ReorderCell(cell_idx, cell_idx - 1))
         |> app(SetFocus(SingleCell([Cell(Index(cell_idx - 1, k))])))
+        |> app(SetAnimTargets(cell_targets_todo))
       | _ => model
       }
     | MoveDown => update_focus(Path.down_path, model)

@@ -25,20 +25,18 @@ let keyup = (_model: Model.t, key: string): list(Update.t) =>
   | _ => []
   };
 
-let seq = (~inject, updates) =>
+let seq = (~inj, updates) =>
   switch (updates) {
   | [] => Event.Ignore
   | [_, ..._] =>
     Event.(
-      Many([Prevent_default, Stop_propagation, ...List.map(inject, updates)])
+      Many([Prevent_default, Stop_propagation, ...List.map(inj, updates)])
     )
   };
 
-let handlers = (~inject: Update.t => Event.t, model: Model.t) => [
+let handlers = (~inj: Update.t => Event.t, model: Model.t) => [
   Attr.on_keypress(_evt => Event.Prevent_default),
-  Attr.on_keyup(evt =>
-    evt |> JsUtil.get_key |> keyup(model) |> seq(~inject)
-  ),
+  Attr.on_keyup(evt => evt |> JsUtil.get_key |> keyup(model) |> seq(~inj)),
   Attr.on_keydown(evt => {
     let key = JsUtil.get_key(evt);
     print_endline("key pressed:");
@@ -60,6 +58,6 @@ let handlers = (~inject: Update.t => Event.t, model: Model.t) => [
       } else {
         [];
       };
-    seq(~inject, updates);
+    seq(~inj, updates);
   }),
 ];

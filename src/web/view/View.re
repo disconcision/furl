@@ -5,7 +5,7 @@ open CommonView;
 open Virtual_dom.Vdom;
 open Virtual_dom.Vdom.Node;
 
-let title_view = (~model as _, ~inject as _) =>
+let title_view = (~model as _, ~inj as _) =>
   div(
     [
       Attr.class_("title"),
@@ -20,31 +20,31 @@ let title_view = (~model as _, ~inject as _) =>
     ],
   );
 
-let tool_atom_view = (~inject, ~model as _: Model.t, word): t => {
+let tool_atom_view = (~inj, ~model as _: Model.t, word): t => {
   div(
     [
       random_offset(word),
       Attr.classes(["atom", "toolbar-atom"]),
       Attr.create("draggable", "true"),
       Attr.on_mousedown(_ => Event.(Many([Stop_propagation]))),
-      Attr.on_click(_ => stop(inject(UniFocus(UpdateWord(_ => word))))),
-      Attr.on("dragstart", _ => stop(inject(Pickup(WordBrush(word))))),
-      Attr.on("dragend", _ => inject(SetDropTarget(NoTarget))),
+      Attr.on_click(_ => stop(inj(UniFocus(UpdateWord(_ => word))))),
+      Attr.on("dragstart", _ => stop(inj(Pickup(WordBrush(word))))),
+      Attr.on("dragend", _ => inj(SetDropTarget(NoTarget))),
     ],
     [text(word)],
   );
 };
 
-let toolbar = (~inject, ~model): t =>
+let toolbar = (~inj, ~model): t =>
   div(
     [Attr.classes(["toolbar"])],
     List.map(
-      tool_atom_view(~inject, ~model),
+      tool_atom_view(~inj, ~model),
       ["sum", "prod", "fact", "1337", "0", "1", "+", "*"],
     ),
   );
 
-let trash_item_view = (~inject, trash_idx, item) => {
+let trash_item_view = (~inj, trash_idx, item) => {
   let (item_view, x, y) =
     switch (item) {
     | Model.TrashedWord(word, (x, y)) => (text(word), x, y)
@@ -58,8 +58,8 @@ let trash_item_view = (~inject, trash_idx, item) => {
     [
       Attr.class_("trash-item"),
       Attr.create("draggable", "true"),
-      Attr.on("dragstart", _ => stop(inject(PickupTrash(trash_idx)))),
-      Attr.on("dragend", _ => inject(SetDropTarget(NoTarget))),
+      Attr.on("dragstart", _ => stop(inj(PickupTrash(trash_idx)))),
+      Attr.on("dragend", _ => inj(SetDropTarget(NoTarget))),
       Attr.string_property(
         "style",
         Printf.sprintf("position: absolute; top:%dpx; left: %dpx;", y, x),
@@ -69,25 +69,25 @@ let trash_item_view = (~inject, trash_idx, item) => {
   );
 };
 
-let trash_view = (~inject, ~model as {trash, _}: Model.t) =>
-  div([Attr.class_("trash")], List.mapi(trash_item_view(~inject), trash));
+let trash_view = (~inj, ~model as {trash, _}: Model.t) =>
+  div([Attr.class_("trash")], List.mapi(trash_item_view(~inj), trash));
 
-let trash_panel = (~inject) =>
+let trash_panel = (~inj) =>
   div(
-    [Attr.class_("trash-panel"), Attr.on_click(_ => inject(EmptyTrash))],
+    [Attr.class_("trash-panel"), Attr.on_click(_ => inj(EmptyTrash))],
     [text("🗑️")],
   );
 
-let cell_control_panel = (~inject) =>
+let cell_control_panel = (~inj) =>
   div(
     [
       Attr.class_("cell-control-panel"),
-      Attr.on_click(_ => inject(TogglePatternDisplay)),
+      Attr.on_click(_ => inj(TogglePatternDisplay)),
     ],
     [text("P")],
   );
 
-let view = (~inject, ~model: Model.t) => {
+let view = (~inj, ~model: Model.t) => {
   let {cells, _}: AnnotatedBlock.annotated_block =
     AnnotatedBlock.mk(model.world);
   let SingleCell(path) = model.focus;
@@ -96,9 +96,8 @@ let view = (~inject, ~model: Model.t) => {
     | [] => "focussed"
     | _ => "on-path"
     };
-  let trash_carry = evt =>
-    inject(TrashCarry((evt##.clientX, evt##.clientY)));
-  let focus_root = _ => inject(SetFocus(SingleCell([])));
+  let trash_carry = evt => inj(TrashCarry((evt##.clientX, evt##.clientY)));
+  let focus_root = _ => inj(SetFocus(SingleCell([])));
   div(
     [Attr.class_(block_class)]
     @ [
@@ -107,15 +106,15 @@ let view = (~inject, ~model: Model.t) => {
       Attr.on("drop", trash_carry),
       Attr.on("dragover", _ => Event.Prevent_default),
       Attr.on("dragenter", _ => Event.Prevent_default),
-      ...Keyboard.handlers(~inject, model),
+      ...Keyboard.handlers(~inj, model),
     ],
     [
-      trash_panel(~inject),
-      cell_control_panel(~inject),
-      toolbar(~inject, ~model),
-      title_view(~inject, ~model),
-      BlockView.view(~inject, ~model, ~path, cells),
-      trash_view(~inject, ~model),
+      trash_panel(~inj),
+      cell_control_panel(~inj),
+      toolbar(~inj, ~model),
+      title_view(~inj, ~model),
+      BlockView.view(~inj, ~model, ~path, cells),
+      trash_view(~inj, ~model),
     ],
   );
 };

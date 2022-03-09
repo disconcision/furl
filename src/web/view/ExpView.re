@@ -24,7 +24,7 @@ let exp_atom_view =
     (
       {word, path: this_path, form, _} as ann_word: AnnotatedBlock.annotated_word_exp,
       ~path: option(Path.t),
-      ~inject,
+      ~inj,
       ~model: Model.t,
     )
     : t => {
@@ -72,14 +72,14 @@ let exp_atom_view =
         @ binding_highlight_class
         @ (is_drop_target ? ["active-drop-target"] : []),
       ),
-      Attr.on_click(set_focus(this_path, inject)),
+      Attr.on_click(set_focus(this_path, inj)),
       Attr.create("draggable", "true"),
-      Attr.on("dragstart", _ => stop(inject(Pickup(WordExp(ann_word))))),
+      Attr.on("dragstart", _ => stop(inj(Pickup(WordExp(ann_word))))),
       Attr.on("dragenter", _ =>
-        stop(prevent(inject(SetDropTarget(this_target))))
+        stop(prevent(inj(SetDropTarget(this_target))))
       ),
-      Attr.on("dragend", _ => inject(SetDropTarget(NoTarget))),
-      Attr.on("drop", _ => stop(inject(DropOnWord(this_path)))),
+      Attr.on("dragend", _ => inj(SetDropTarget(NoTarget))),
+      Attr.on("drop", _ => stop(inj(DropOnWord(this_path)))),
     ],
     [word_view],
   );
@@ -89,19 +89,19 @@ let view =
     (
       {words, path: path_this, form, _}: AnnotatedBlock.annotated_exp,
       ~path: option(Path.t),
-      ~inject,
+      ~inj,
       ~model,
     ) => {
   let word_views =
     List.mapi(
       (idx, word) =>
-        exp_atom_view(word, ~path=focus_word(path, idx), ~inject, ~model),
+        exp_atom_view(word, ~path=focus_word(path, idx), ~inj, ~model),
       words,
     );
   let sep_views =
     List.init(
       List.length(word_views) + 1,
-      word_sep_view(~inject, ~model, path_this),
+      word_sep_view(~inj, ~model, path_this),
     );
   div(
     [

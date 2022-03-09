@@ -12,8 +12,8 @@ let atom_focus_class: option(Path.t) => string =
     | Some(_) => "on-path"
     };
 
-let set_focus = (this_path, inject, _evt) =>
-  stop(inject(SetFocus(SingleCell(this_path))));
+let set_focus = (this_path, inj, _evt) =>
+  stop(inj(SetFocus(SingleCell(this_path))));
 
 let focus_word = (path: option(Path.t), i: int): option(Path.t) =>
   switch (path) {
@@ -30,7 +30,7 @@ let core_word_view: (Model.pattern_display, Word.t) => t =
 
 let word_sep_view =
     (
-      ~inject,
+      ~inj,
       ~model as {drop_target, carry, world, _}: Model.t,
       exp_path: Path.t,
       idx,
@@ -63,13 +63,11 @@ let word_sep_view =
       Attr.classes(
         ["word-separator"] @ (is_drop_target ? ["active-drop-target"] : []),
       ),
-      Attr.on_click(_ => stop(inject(InsertNewWord(exp_path, idx)))),
-      Attr.on("drop", _ => stop(inject(DropOnWordSep(exp_path, idx)))),
+      Attr.on_click(_ => stop(inj(InsertNewWord(exp_path, idx)))),
+      Attr.on("drop", _ => stop(inj(DropOnWordSep(exp_path, idx)))),
       Attr.on("dragover", _ => Event.Prevent_default),
-      Attr.on("dragenter", _ =>
-        prevent(inject(SetDropTarget(this_target)))
-      ),
-      //Attr.on("dragleave", _evt => inject(SetDropTarget(NoTarget))),
+      Attr.on("dragenter", _ => prevent(inj(SetDropTarget(this_target)))),
+      //Attr.on("dragleave", _evt => inj(SetDropTarget(NoTarget))),
     ],
     [text("·")],
   );

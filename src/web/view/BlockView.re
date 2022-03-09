@@ -24,20 +24,18 @@ let drop_target_class =
   is_drop_target ? ["active-drop-target"] : [];
 };
 
-let cell_sep_view = (~inject, ~model: Model.t, sep_idx) => {
+let cell_sep_view = (~inj, ~model: Model.t, sep_idx) => {
   let this_target: Model.drop_target = CellSepatator(sep_idx);
   div(
     [
       Attr.classes(
         ["cell-separator"] @ drop_target_class(~model, this_target, sep_idx),
       ),
-      Attr.on_click(_ => stop(inject(InsertNewCell(sep_idx)))),
-      Attr.on("drop", _ => stop(inject(DropOnCellSep(sep_idx)))),
+      Attr.on_click(_ => stop(inj(InsertNewCell(sep_idx)))),
+      Attr.on("drop", _ => stop(inj(DropOnCellSep(sep_idx)))),
       Attr.on("dragover", _ => {Event.Prevent_default}),
-      Attr.on("dragenter", _ =>
-        prevent(inject(SetDropTarget(this_target)))
-      ),
-      //Attr.on("dragleave", _evt => inject(SetDropTarget(NoTarget))),
+      Attr.on("dragenter", _ => prevent(inj(SetDropTarget(this_target)))),
+      //Attr.on("dragleave", _evt => inj(SetDropTarget(NoTarget))),
     ],
     [text("")],
   );
@@ -52,7 +50,7 @@ let cell_focus_class = (path: option(Path.t)) =>
 
 let cell_view =
     (
-      ~inject,
+      ~inj,
       ~model,
       ~path: option(Path.t),
       {path: this_path, expression, pattern, value, uid, _}: AnnotatedBlock.annotated_cell,
@@ -79,31 +77,30 @@ let cell_view =
       random_skew(string_of_int(idx)),
       Attr.id(string_of_int(uid)),
       Attr.classes(["cell-view", cell_focus_class(path)]),
-      Attr.on_click(set_focus(this_path, inject)),
+      Attr.on_click(set_focus(this_path, inj)),
       Attr.create("draggable", "true"),
-      Attr.on("dragstart", _ => stop(inject(Pickup(Cell(this_path))))),
-      Attr.on("dragend", _ => inject(SetDropTarget(NoTarget))),
+      Attr.on("dragstart", _ => stop(inj(Pickup(Cell(this_path))))),
+      Attr.on("dragend", _ => inj(SetDropTarget(NoTarget))),
       Attr.on("dragover", _evt => {Event.Prevent_default}),
       Attr.on("dragenter", _evt => {Event.Prevent_default}),
     ],
     [
-      PatView.view(pattern, ~path=pattern_path, ~inject, ~model),
-      ExpView.view(expression, ~path=expression_path, ~inject, ~model),
-      ValView.view(value, ~path=value_path, ~inject),
+      PatView.view(pattern, ~path=pattern_path, ~inj, ~model),
+      ExpView.view(expression, ~path=expression_path, ~inj, ~model),
+      ValView.view(value, ~path=value_path, ~inj),
     ],
   );
 };
 
-let view = (~inject, ~model, ~path: Path.t, cells) => {
+let view = (~inj, ~model, ~path: Path.t, cells) => {
   let focus = Path.focus_cell(path);
   let cell_views =
     List.mapi(
-      (idx, cell) =>
-        cell_view(~inject, ~model, ~path=focus(idx), cell, idx),
+      (idx, cell) => cell_view(~inj, ~model, ~path=focus(idx), cell, idx),
       cells,
     );
   let sep_views =
-    List.init(List.length(cell_views) + 1, cell_sep_view(~inject, ~model));
+    List.init(List.length(cell_views) + 1, cell_sep_view(~inj, ~model));
   let views = Util.ListUtil.interleave(sep_views, cell_views);
   div(
     [Attr.class_("cells-view"), Attr.on("drop", _ => stop(Event.Ignore))],
