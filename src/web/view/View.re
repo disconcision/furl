@@ -87,6 +87,15 @@ let cell_control_panel = (~inj) =>
     [text("P")],
   );
 
+let anim_control_panel = (~inj) =>
+  div(
+    [
+      Attr.class_("anim-control-panel"),
+      Attr.on_click(_ => inj(ToggleAnimations)),
+    ],
+    [text("🎬")],
+  );
+
 let view = (~inj, ~model: Model.t) => {
   let {cells, _}: AnnotatedBlock.annotated_block =
     AnnotatedBlock.mk(model.world);
@@ -110,6 +119,7 @@ let view = (~inj, ~model: Model.t) => {
     ],
     [
       trash_panel(~inj),
+      anim_control_panel(~inj),
       cell_control_panel(~inj),
       toolbar(~inj, ~model),
       title_view(~inj, ~model),

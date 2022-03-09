@@ -2,7 +2,19 @@ open Sexplib.Std;
 open Util;
 open Core;
 
-let cell_targets_todo = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
+let cell_targets_todo = [
+  "-1",
+  "0",
+  "1",
+  "2",
+  "3",
+  "4",
+  "5",
+  "6",
+  "7",
+  "8",
+  "9",
+];
 
 [@deriving sexp]
 type single_focus_action =
@@ -26,6 +38,7 @@ type t =
   | UniFocus(single_focus_action)
   | Delete(Path.t)
   | TogglePatternDisplay
+  | ToggleAnimations
   | UpdateKeymap(Model.keymap => Model.keymap)
   | DebugPrint
   // words
@@ -87,6 +100,11 @@ let update_keymap = (f, {keymap, _} as model: Model.t) => {
 let update_anim_targets = (f, {anim_targets, _} as model: Model.t) => {
   ...model,
   anim_targets: f(anim_targets),
+};
+
+let update_animations_off = (f, {animations_off, _} as model: Model.t) => {
+  ...model,
+  animations_off: f(animations_off),
 };
 
 let rec apply: (Model.t, t, 'b, ~schedule_action: 'a) => Model.t =
@@ -327,6 +345,7 @@ let rec apply: (Model.t, t, 'b, ~schedule_action: 'a) => Model.t =
             },
           model,
         )
+      | ToggleAnimations => update_animations_off(b => !b, model)
       | DebugPrint =>
         let ann_block = AnnotatedBlock.mk(model.world);
         let furled = FurledBlock.furl_block(ann_block);
@@ -389,10 +408,16 @@ and apply_single:
         |> app(SetAnimTargets(cell_targets_todo))
       | _ => model
       }
-    | MoveDown => update_focus(Path.down_path, model)
-    | MoveUp => update_focus(Path.up_path, model)
-    | MoveRight => update_focus(Path.next_word_path, model)
-    | MoveLeft => update_focus(Path.prev_word_path, model)
+    | MoveDown =>
+      update_focus(Path.down_path, model) |> app(SetAnimTargets(["-1"]))
+    | MoveUp =>
+      update_focus(Path.up_path, model) |> app(SetAnimTargets(["-1"]))
+    | MoveRight =>
+      update_focus(Path.next_word_path, model)
+      |> app(SetAnimTargets(["-1"]))
+    | MoveLeft =>
+      update_focus(Path.prev_word_path, model)
+      |> app(SetAnimTargets(["-1"]))
     | InsertChar(op) when Expression.is_operator(op) =>
       let is_a_next_word = (block, path: Path.t) =>
         switch (Path.next_word(block, path)) {

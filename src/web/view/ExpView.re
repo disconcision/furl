@@ -62,6 +62,7 @@ let exp_atom_view =
   div(
     [
       random_offset(word),
+      //Attr.id(atom_focus_class(path) == "focussed" ? "-1" : ""),
       Attr.classes(
         [
           "atom",

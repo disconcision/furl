@@ -385,15 +385,25 @@ body {
   text-shadow: 9px 4px yellow;
 }
 
+.anim-control-panel {
+  position: absolute;
+  top: 0.5em;
+  left: 2.5em;
+  cursor: pointer;
+  filter: invert(40%) sepia(81%) saturate(1655%) hue-rotate(164deg) brightness(98%) contrast(103%);
+}
+
 .cell-control-panel {
   position: absolute;
   top: 0.7em;
-  left: 2.5em;
+  left: 4.3em;
   cursor: pointer;
   color: #f56197;
 }
 
-.cell-control-panel:hover {
+.trash-panel:hover,
+.cell-control-panel:hover,
+.anim-control-panel:hover {
   transform: rotate(35deg);
   text-shadow: 9px 4px yellow;
 }

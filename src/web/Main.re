@@ -75,8 +75,14 @@ let flip = (old_coords, new_coords, anim_targets) => {
 };
 
 let on_display =
-    (model, old_model, anim_targets, state: State.t, ~schedule_action as _) =>
-  if (model === old_model) {
+    (
+      model: Model.t,
+      old_model,
+      anim_targets,
+      state: State.t,
+      ~schedule_action as _,
+    ) =>
+  if (model.animations_off || model === old_model) {
     ();
   } else {
     let old_coords = state^;
