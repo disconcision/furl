@@ -222,10 +222,17 @@ body {
   text-shadow: 2px 2px #140614, -2px -2px #cbc6cb;
 }
 
-.expression-atom.exp-atom-unbound, .expression-atom.exp-atom-formless {
-  background-color: var(--main_background-color) !important;
+.expression-atom.exp-atom-unbound,
+.expression-atom.exp-atom-formless {
+  background-color: #a9a1cd;
   color: #e7e2fd;
-  outline: solid 1px var(--main_background-color) !important;
+  outline: solid 1px #a9a1cd;
+}
+.expression-atom.exp-atom-unbound.focussed,
+.expression-atom.exp-atom-formless.focussed {
+  background-color: rgb(68 62 84);
+  color: #e4ff03;
+  outline: solid 1px rgb(68 62 84);
 }
 
 .expression-atom.exp-atom-unbound::after, .expression-atom.exp-atom-formless::after {
@@ -390,7 +397,7 @@ body {
   top: 0.5em;
   left: 2.5em;
   cursor: pointer;
-  filter: invert(40%) sepia(81%) saturate(1655%) hue-rotate(164deg) brightness(98%) contrast(103%);
+  /*filter: invert(40%) sepia(81%) saturate(1655%) hue-rotate(164deg) brightness(98%) contrast(103%);*/
 }
 
 .cell-control-panel {

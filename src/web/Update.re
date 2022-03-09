@@ -396,7 +396,7 @@ and apply_single:
         model
         |> app(ReorderCell(cell_idx + 1, cell_idx))
         |> app(SetFocus(SingleCell([Cell(Index(cell_idx + 1, k))])))
-        |> app(SetAnimTargets(cell_targets_todo))
+      //|> app(SetAnimTargets(cell_targets_todo))
       | _ => model
       }
     | SwapCellUp =>
@@ -405,19 +405,15 @@ and apply_single:
         model
         |> app(ReorderCell(cell_idx, cell_idx - 1))
         |> app(SetFocus(SingleCell([Cell(Index(cell_idx - 1, k))])))
-        |> app(SetAnimTargets(cell_targets_todo))
+      //|> app(SetAnimTargets(cell_targets_todo))
       | _ => model
       }
-    | MoveDown =>
-      update_focus(Path.down_path, model) |> app(SetAnimTargets(["-1"]))
-    | MoveUp =>
-      update_focus(Path.up_path, model) |> app(SetAnimTargets(["-1"]))
-    | MoveRight =>
-      update_focus(Path.next_word_path, model)
-      |> app(SetAnimTargets(["-1"]))
-    | MoveLeft =>
-      update_focus(Path.prev_word_path, model)
-      |> app(SetAnimTargets(["-1"]))
+    | MoveDown => update_focus(Path.down_path, model) //|> app(SetAnimTargets(["-1"]))
+    | MoveUp => update_focus(Path.up_path, model) //|> app(SetAnimTargets(["-1"]))
+    | MoveRight => update_focus(Path.next_word_path, model)
+    //|> app(SetAnimTargets(["-1"]))
+    | MoveLeft => update_focus(Path.prev_word_path, model)
+    //|> app(SetAnimTargets(["-1"]))
     | InsertChar(op) when Expression.is_operator(op) =>
       let is_a_next_word = (block, path: Path.t) =>
         switch (Path.next_word(block, path)) {

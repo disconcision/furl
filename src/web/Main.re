@@ -12,13 +12,11 @@ let log = x => Js_of_ocaml.Firebug.console##log(x);
 
 let force_get_elem_by_id = id => {
   let doc = Dom_html.document;
-  Js.Opt.get(
-    doc##getElementById(Js.string(id)),
-    () => {
-      log(id);
-      assert(false);
-    },
-  );
+  Js.Opt.get(doc##getElementById(Js.string(id)), () => {
+    assert
+      (false)
+      //log(id);
+  });
 };
 let get_coords = (id): 'a =>
   try({
@@ -58,7 +56,7 @@ let set_style_init = ((id, (x, y))) =>
 let set_style_final = ((id, _)) =>
   set_style_or_dont(
     id,
-    "transform:none; transition: transform 200ms ease-out;",
+    "transform:none; transition: transform 150ms cubic-bezier(0.75, -0.5, 0.25, 1.5);",
   );
 
 let flip = (old_coords, new_coords, anim_targets) => {
@@ -78,7 +76,7 @@ let on_display =
     (
       model: Model.t,
       old_model,
-      anim_targets,
+      //anim_targets,
       state: State.t,
       ~schedule_action as _,
     ) =>
@@ -90,7 +88,7 @@ let on_display =
     //Util.P.p(sexp_of_bloo(old_coords));
     //Util.P.p(sexp_of_bloo(new_coords));
     state := new_coords;
-    flip(old_coords, new_coords, anim_targets);
+    flip(old_coords, new_coords, model.anim_targets);
   };
 
 module App = {
@@ -140,10 +138,13 @@ module App = {
     open Incr.Let_syntax;
     let%map model = model
     and old_model = old_model;
-    let {anim_targets, _}: Model.t = model;
+    //let {anim_targets, _}: Model.t = model;
     Component.create(
       ~apply_action=
         (update: Update.t, state: State.t, ~schedule_action) => {
+          Util.P.p(
+            Sexplib.Std.sexp_of_list(sexp_of_string, model.anim_targets),
+          );
           let model = Update.update_anim_targets(_ => [], model);
           Web.Update.apply(model, update, state, ~schedule_action);
         },
@@ -154,7 +155,7 @@ module App = {
            print_endline("on_display");
          },
          */
-      ~on_display=on_display(model, old_model, anim_targets),
+      ~on_display=on_display(model, old_model),
       model,
       Web.View.view(~inj=inject, ~model),
     );

@@ -22,6 +22,8 @@ let keydown = (model: Model.t, key: string): list(Update.t) =>
 let keyup = (_model: Model.t, key: string): list(Update.t) =>
   switch (key) {
   | "Shift" => [UpdateKeymap(km => {...km, shift: false})]
+  | "ArrowDown"
+  //| "ArrowUp" => [SetAnimTargets(Update.cell_targets_todo)]
   | _ => []
   };
 
