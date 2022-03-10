@@ -53,7 +53,7 @@ let cell_view =
       ~inj,
       ~model,
       ~path: option(Path.t),
-      {path: this_path, expression, pattern, value, uid, _}: AnnotatedBlock.annotated_cell,
+      {path: this_path, expression, pattern, value, uid, _} as ann_cell: AnnotatedBlock.annotated_cell,
       idx,
     )
     : t => {
@@ -84,7 +84,7 @@ let cell_view =
         when trying to hit sep...
        */
       Attr.on("drop", _ => stop(inj(DropOnCellSep(idx + 1)))),
-      Attr.on("dragstart", _ => stop(inj(Pickup(Cell(this_path))))),
+      Attr.on("dragstart", _ => stop(inj(Pickup(Cell(ann_cell))))),
       Attr.on("dragend", _ => inj(SetDropTarget(NoTarget))),
       Attr.on("dragover", _evt => {Event.Prevent_default}),
       Attr.on("dragenter", _evt => {Event.Prevent_default}),

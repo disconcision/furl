@@ -36,7 +36,7 @@ type carry =
   | WordExp(AnnotatedBlock.annotated_word_exp)
   | WordPat(AnnotatedBlock.annotated_word_pat)
   | WordBrush(Word.t)
-  | Cell(Path.t)
+  | Cell(AnnotatedBlock.annotated_cell)
   | CellBrush(Cell.t);
 
 [@deriving sexp]

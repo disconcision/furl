@@ -62,3 +62,5 @@ let init_full: ((Word.s, Word.s)) => t =
   };
 
 let init: 'a => t = () => init_name(Word.mk());
+
+let copy: t => t = cell => {...cell, uid: mk_uid()};

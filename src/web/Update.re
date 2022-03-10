@@ -133,7 +133,7 @@ let rec apply: (Model.t, t, 'b, ~schedule_action: 'a) => Model.t =
         | CellBrush(_) => model
         | WordExp({path, _})
         | WordPat({path, _})
-        | Cell(path) => app(Delete(path), model)
+        | Cell({path, _}) => app(Delete(path), model)
         }
       | TrashCarry(coords) =>
         switch (model.carry) {
@@ -146,7 +146,8 @@ let rec apply: (Model.t, t, 'b, ~schedule_action: 'a) => Model.t =
           model
           |> update_trash(trash => [TrashedWord(word, coords), ...trash])
           |> app(DeleteCarrySource);
-        | Cell(path) =>
+        | Cell({path, _}) =>
+          // TODO: refactor to use annotated_cell
           let cell =
             switch (Path.get_cell(path, model.world)) {
             | Some(cell) => cell
@@ -203,11 +204,18 @@ let rec apply: (Model.t, t, 'b, ~schedule_action: 'a) => Model.t =
             | _ => model
             }
           // 3. cells get copied if shift is pressed
-          | Cell([Cell(Index(carry_idx, _)), ..._]) when model.keymap.shift =>
-            let cell = Block.nth_cell(block, carry_idx);
+          | Cell({path: [Cell(Index(carry_idx, _)), ..._], _})
+              when model.keymap.shift =>
+            let cell = carry_idx |> Block.nth_cell(block) |> Cell.copy;
+            state.anim_targets =
+              State.cell_targets_todo
+              |> List.filter(cid => int_of_string(cid) != cell.uid);
             app(InsertCell(sep_idx, cell), model);
           // 4. cells get reordered otherwise
-          | Cell([Cell(Index(carry_idx, _)), ..._]) =>
+          | Cell({path: [Cell(Index(carry_idx, _)), ..._], uid, _}) =>
+            state.anim_targets =
+              State.cell_targets_todo
+              |> List.filter(cid => int_of_string(cid) != uid);
             let cell = Block.nth_cell(block, carry_idx);
             let new_idx = sep_idx > carry_idx ? sep_idx - 1 : sep_idx;
             model
