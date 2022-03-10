@@ -13,7 +13,7 @@ let exp_atom_class: Expression.atom => string =
   | Operator(_) => "exp-atom-operator"
   | Formless(_) => "exp-atom-formless";
 
-let expression_class: Expression.form => string =
+let expression_class: Expression.t => string =
   fun
   | Atom(_) => "expr-singleton"
   | App(_) => "expr-app"

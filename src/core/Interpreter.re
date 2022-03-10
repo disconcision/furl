@@ -20,7 +20,7 @@ let eval_atom: (Expression.atom, env) => option(int) =
     };
   };
 
-let rec eval_expression: (Expression.form, env) => option(int) =
+let rec eval_expression: (Expression.t, env) => option(int) =
   (form, env) => {
     switch (form) {
     | Unknown(_) => None

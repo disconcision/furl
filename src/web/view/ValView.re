@@ -7,7 +7,7 @@ open Virtual_dom.Vdom.Node;
 
 let val_atom_view =
     (
-      {word, path: this_path, _}: AnnotatedBlock.annotated_word,
+      {word, path: this_path, form, _}: AnnotatedBlock.annotated_word_val,
       ~path: option(Path.t),
       ~inj,
     )
@@ -15,7 +15,15 @@ let val_atom_view =
   div(
     [
       random_offset(word),
-      Attr.classes(["atom", "value-atom", atom_focus_class(path)]),
+      Attr.classes(
+        ["atom", "value-atom", atom_focus_class(path)]
+        @ (
+          switch (form) {
+          | Unknown(_) => ["value-unknown"]
+          | _ => []
+          }
+        ),
+      ),
       Attr.on_click(set_focus(this_path, inj)),
     ],
     [text(word)],
@@ -23,7 +31,7 @@ let val_atom_view =
 
 let view =
     (
-      {words, path: _}: AnnotatedBlock.annotated_field,
+      {words, path: _, _}: AnnotatedBlock.annotated_val,
       ~path: option(Path.t),
       ~inj,
     ) =>

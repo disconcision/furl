@@ -15,13 +15,13 @@ type prim =
   | Fact;
 
 [@deriving sexp]
-type form =
+type t =
   | Atom(atom)
-  | App(prim, list(form))
-  | Seq(prim, list(form))
+  | App(prim, list(t))
+  | Seq(prim, list(t))
   | Unknown(Word.s)
-  | Let(list(binding), form)
-and binding = (Pattern.form, form);
+  | Let(list(binding), t)
+and binding = (Pattern.t, t);
 
 let prim_of_string: string => option(prim) =
   fun
@@ -58,7 +58,7 @@ let is_bound_var: atom => bool =
     | _ => false
     };
 
-let parse: (Path.ctx, Word.s) => form =
+let parse: (Path.ctx, Word.s) => t =
   (ctx, words) => {
     let parse_word = word => Atom(parse_atom(ctx, word));
     switch (words) {

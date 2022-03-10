@@ -1,8 +1,9 @@
 open Sexplib.Std;
 
 [@deriving sexp]
-type annotated_word = {
+type annotated_word_val = {
   path: Path.t,
+  form: Value.atom,
   word: Word.t,
 };
 
@@ -21,22 +22,23 @@ type annotated_word_exp = {
 };
 
 [@deriving sexp]
-type annotated_field = {
+type annotated_val = {
   path: Path.t,
-  words: list(annotated_word),
+  form: Value.t,
+  words: list(annotated_word_val),
 };
 
 [@deriving sexp]
 type annotated_pat = {
   path: Path.t,
-  form: option(Pattern.form),
+  form: option(Pattern.t),
   words: list(annotated_word_pat),
 };
 
 [@deriving sexp]
 type annotated_exp = {
   path: Path.t,
-  form: Expression.form,
+  form: Expression.t,
   words: list(annotated_word_exp),
 };
 
@@ -60,23 +62,22 @@ type annotated_cell = {
   vars,
   pattern: annotated_pat,
   expression: annotated_exp,
-  value: annotated_field,
+  value: annotated_val,
   uid: Cell.uid,
 };
 
 [@deriving sexp]
-type annotated_block = {
+type t = {
   path: Path.t, // always empty for now since only one block
   cells: list(annotated_cell),
 };
 
-type t = annotated_block;
-
-let annotate_word = (path, length, idx, word) => {
+let annotate_word_val = (path, length, idx, word): annotated_word_val => {
   {
-    //TODO: specialize parse for patterns, values
+    //TODO: specialize parse for values
     path: path @ [Path.Word(Index(idx, length))],
     word,
+    form: Value.parse_atom(word),
   };
 };
 
@@ -88,11 +89,12 @@ let annotate_expression_word = (context, path, length, idx, word) => {
   };
 };
 
-let annotate_field: (Path.t, Word.s) => annotated_field =
+let annotate_val: (Path.t, Word.s) => annotated_val =
   (path, words) => {
     {
       path,
-      words: List.mapi(annotate_word(path, List.length(words)), words),
+      words: List.mapi(annotate_word_val(path, List.length(words)), words),
+      form: Value.parse(words),
     };
   };
 
@@ -128,8 +130,6 @@ let annotate_exp: (Path.ctx, Path.t, Word.s) => annotated_exp =
       );
     {path, form, words};
   };
-
-let annotate_val = annotate_field;
 
 let get_pat_vars: annotated_pat => Path.ctx =
   ({words, _}) =>
@@ -172,7 +172,7 @@ let init_ctx = [
   ("fact", [Path.Cell(Index(-1, -1))]),
 ]; //TODO
 
-let forward_pass: Block.t => annotated_block =
+let forward_pass: Block.t => t =
   block => {
     let path = [];
 
@@ -304,7 +304,7 @@ let extend_live_ctx = (live_ctx, ann_cell) =>
   | _ => live_ctx
   };
 
-let reverse_pass: annotated_block => annotated_block =
+let reverse_pass: t => t =
   ({cells, path, _}) => {
     let rev_cells = List.rev(cells);
     let (new_cells, _, _) =
@@ -321,6 +321,6 @@ let reverse_pass: annotated_block => annotated_block =
     {cells: List.rev(new_cells), path};
   };
 
-let mk = (block: Block.t): annotated_block => {
+let mk = (block: Block.t): t => {
   block |> forward_pass |> reverse_pass;
 };

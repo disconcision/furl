@@ -98,8 +98,7 @@ let cell_control_panel = (~inj, pattern_display) =>
   );
 
 let view = (~inj, ~model: Model.t) => {
-  let {cells, _}: AnnotatedBlock.annotated_block =
-    AnnotatedBlock.mk(model.world);
+  let {cells, _}: AnnotatedBlock.t = AnnotatedBlock.mk(model.world);
   let SingleCell(path) = model.focus;
   let block_class =
     switch (path) {

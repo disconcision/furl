@@ -61,7 +61,7 @@
 :root {
 
   --base-radius: 0.1em;
-  --main_background-color: #c0aec9;
+  --main_background-color: #e8e2ff;
 
 }
 
@@ -207,6 +207,12 @@ body {
 .value-view {
   color: rgb(44 210 196);
   /*text-shadow: 2px 1px #184a35;*/
+}
+
+.value-atom.value-unknown {
+  color: var(--main_background-color);
+  background-color: rgb(44 210 196);
+  outline: solid 1px rgb(44 210 196);
 }
 
 .expression-atom {

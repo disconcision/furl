@@ -7,7 +7,7 @@ type atom =
   | Formless(string);
 
 [@deriving sexp]
-type form =
+type t =
   | Atom(atom)
   //| Cons(name, list(atom))
   | Unknown(Word.s);
@@ -28,7 +28,7 @@ let parse_atom: (uses_ctx, Word.t) => atom =
     | _ => Formless(word)
     };
 
-let parse: (uses_ctx, Word.s) => form =
+let parse: (uses_ctx, Word.s) => t =
   (ctx, words) => {
     switch (words) {
     | [x] => Atom(parse_atom(ctx, x))

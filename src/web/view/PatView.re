@@ -5,7 +5,7 @@ open CommonView;
 open Virtual_dom.Vdom;
 open Virtual_dom.Vdom.Node;
 
-let pattern_class: option(Pattern.form) => string =
+let pattern_class: option(Pattern.t) => string =
   fun
   | Some(Atom(_)) => "pat-singleton"
   | _ => "pat-unknown";

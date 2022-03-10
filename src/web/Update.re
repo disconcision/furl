@@ -351,8 +351,8 @@ let rec apply: (Model.t, t, 'b, ~schedule_action: 'a) => Model.t =
         Util.P.ps([
           ("FOCUS:", Model.sexp_of_focus(model.focus)),
           ("BLOCK:", Block.sexp_of_t(model.world)),
-          ("ANN:", AnnotatedBlock.sexp_of_annotated_block(ann_block)),
-          ("FURLED:", Expression.sexp_of_form(furled)),
+          ("ANN:", AnnotatedBlock.sexp_of_t(ann_block)),
+          ("FURLED:", Expression.sexp_of_t(furled)),
         ]);
         model;
       };

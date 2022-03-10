@@ -12,9 +12,9 @@
  */
 
 [@deriving sexp]
-type ctx = Environment.t_(Expression.form);
+type ctx = Environment.t_(Expression.t);
 
-let rec substitute: (ctx, Expression.form) => Expression.form =
+let rec substitute: (ctx, Expression.t) => Expression.t =
   (ctx, form) =>
     switch (form) {
     | Atom(a) =>
@@ -78,7 +78,7 @@ let cell_to_binding: AnnotatedBlock.annotated_cell => Expression.binding =
     | _ => (Unknown([]), ann_cell.expression.form)
     };
 
-let furl_block: AnnotatedBlock.t => Expression.form =
+let furl_block: AnnotatedBlock.t => Expression.t =
   ({cells, _}) => {
     switch (cells |> furl_block'(Environment.empty) |> List.rev) {
     | [] => Unknown([])
