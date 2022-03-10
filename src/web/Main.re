@@ -5,9 +5,7 @@ open Web;
 open Sexplib.Std;
 [@deriving sexp]
 type bloo = list((string, (int, int)));
-let init_coords = ((-1), (-1));
 
-let init_state = List.map(id => (id, init_coords), Update.cell_targets_todo);
 let log = x => Js_of_ocaml.Firebug.console##log(x);
 
 let force_get_elem_by_id = id => {
@@ -18,6 +16,7 @@ let force_get_elem_by_id = id => {
       //log(id);
   });
 };
+
 let get_coords = (id): 'a =>
   try({
     let container_rect = force_get_elem_by_id(id)##getBoundingClientRect;
@@ -26,7 +25,7 @@ let get_coords = (id): 'a =>
       int_of_float(container_rect##.left),
     );
   }) {
-  | _ => init_coords
+  | _ => State.init_coords
   };
 
 let request_frame = c => {
@@ -43,7 +42,8 @@ let set_style_or_dont = (elem_id, string) =>
   };
 
 let delta_coords = ((new_x, new_y), (old_x, old_y)) =>
-  (old_x, old_y) != init_coords ? (old_x - new_x, old_y - new_y) : (0, 0);
+  (old_x, old_y) != State.init_coords
+    ? (old_x - new_x, old_y - new_y) : (0, 0);
 
 let set_style_init = ((id, (x, y))) =>
   Printf.sprintf(
@@ -83,12 +83,14 @@ let on_display =
   if (model.animations_off || model === old_model) {
     ();
   } else {
-    let old_coords = state^;
+    let old_coords = state.tracked_elems;
     let new_coords = List.map(((i, _)) => (i, get_coords(i)), old_coords);
     //Util.P.p(sexp_of_bloo(old_coords));
     //Util.P.p(sexp_of_bloo(new_coords));
-    state := new_coords;
-    flip(old_coords, new_coords, model.anim_targets);
+    state.tracked_elems = new_coords;
+    flip(old_coords, new_coords, state.anim_targets);
+    print_endline("setting anim_targets to empty");
+    state.anim_targets = [];
   };
 
 module App = {
@@ -131,7 +133,7 @@ module App = {
         Js.string("MAC"),
       )
       >= 0;
-    Async_kernel.Deferred.return(ref(init_state));
+    Async_kernel.Deferred.return(State.init_state);
   };
 
   let create = (model: Incr.t(Web.Model.t), ~old_model, ~inject) => {
@@ -142,11 +144,10 @@ module App = {
     Component.create(
       ~apply_action=
         (update: Update.t, state: State.t, ~schedule_action) => {
-          Util.P.p(
-            Sexplib.Std.sexp_of_list(sexp_of_string, model.anim_targets),
-          );
-          let model = Update.update_anim_targets(_ => [], model);
-          Web.Update.apply(model, update, state, ~schedule_action);
+          Util.P.p(State.sexp_of_t(state));
+          let m = Web.Update.apply(model, update, state, ~schedule_action);
+          Util.P.p(State.sexp_of_t(state));
+          m;
         },
       /*
        ~on_display=

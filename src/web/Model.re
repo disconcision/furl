@@ -72,6 +72,11 @@ type keymap = {
 };
 
 [@deriving sexp]
+type lastkey =
+  | KeyUp(string)
+  | KeyDown(string);
+
+[@deriving sexp]
 type t = {
   world: Block.t,
   cell_proj,
@@ -81,8 +86,8 @@ type t = {
   carry,
   pattern_display,
   keymap,
-  anim_targets: list(string),
   animations_off: bool,
+  lastkey,
 };
 
 let world = World.init;
@@ -109,6 +114,6 @@ let init = {
   },
   pattern_display: Name,
   cell_proj: ExpressionPattern,
-  anim_targets: [],
   animations_off: false,
+  lastkey: KeyUp(""),
 };

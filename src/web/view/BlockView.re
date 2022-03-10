@@ -79,6 +79,11 @@ let cell_view =
       Attr.classes(["cell-view", cell_focus_class(path)]),
       Attr.on_click(set_focus(this_path, inj)),
       Attr.create("draggable", "true"),
+      /*
+        not sure if good idea... trying bcuz accidental drops on cell
+        when trying to hit sep...
+       */
+      Attr.on("drop", _ => stop(inj(DropOnCellSep(idx + 1)))),
       Attr.on("dragstart", _ => stop(inj(Pickup(Cell(this_path))))),
       Attr.on("dragend", _ => inj(SetDropTarget(NoTarget))),
       Attr.on("dragover", _evt => {Event.Prevent_default}),

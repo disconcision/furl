@@ -2,20 +2,6 @@ open Sexplib.Std;
 open Util;
 open Core;
 
-let cell_targets_todo = [
-  "-1",
-  "0",
-  "1",
-  "2",
-  "3",
-  "4",
-  "5",
-  "6",
-  "7",
-  "8",
-  "9",
-];
-
 [@deriving sexp]
 type single_focus_action =
   | SwapCellDown
@@ -33,7 +19,8 @@ type single_focus_action =
 
 [@deriving sexp]
 type t =
-  | SetAnimTargets(list(string))
+  | SetLastKey(Model.lastkey)
+  | SetAnimTargetCells
   | SetFocus(Model.focus)
   | UniFocus(single_focus_action)
   | Delete(Path.t)
@@ -97,11 +84,6 @@ let update_keymap = (f, {keymap, _} as model: Model.t) => {
   keymap: f(keymap),
 };
 
-let update_anim_targets = (f, {anim_targets, _} as model: Model.t) => {
-  ...model,
-  anim_targets: f(anim_targets),
-};
-
 let update_animations_off = (f, {animations_off, _} as model: Model.t) => {
   ...model,
   animations_off: f(animations_off),
@@ -113,17 +95,22 @@ let rec apply: (Model.t, t, 'b, ~schedule_action: 'a) => Model.t =
     let app = (a, m) => apply(m, a, state, ~schedule_action);
     let model =
       switch (update) {
+      | SetLastKey(k) =>
+        switch (model.lastkey, k) {
+        | (KeyDown(qq), KeyDown(bb)) when qq == bb => state.anim_targets = []
+        | _ => ()
+        };
+        {...model, lastkey: k};
+      | SetAnimTargetCells =>
+        state.anim_targets = State.cell_targets_todo;
+        model;
       | SetFocus(focus) => update_focus(_ => focus, model)
-      | SetAnimTargets(anim_targets) =>
-        update_anim_targets(_ => anim_targets, model)
       | Pickup(thing) => update_carry(_ => thing, model)
       | EmptyTrash => update_trash(_ => [], model)
       | UpdateKeymap(f) => update_keymap(f, model)
       | SetDropTarget(target) => update_drop_target(_ => target, model)
       | SwapCells(a, b) => update_world(ListUtil.swap(a, b), model)
-      | Delete(path) =>
-        update_world(Path.delete(path), model)
-        |> app(SetAnimTargets(cell_targets_todo))
+      | Delete(path) => update_world(Path.delete(path), model)
       | UpdateWord(path, f) =>
         update_world(Path.update_word(f, path), model)
       | UniFocus(a) => apply_single(a, model, state, ~schedule_action)
@@ -165,6 +152,7 @@ let rec apply: (Model.t, t, 'b, ~schedule_action: 'a) => Model.t =
             | Some(cell) => cell
             | None => Cell.init()
             };
+          state.anim_targets = State.cell_targets_todo;
           model
           |> update_trash(trash => [TrashedCell(cell, coords), ...trash])
           |> app(DeleteCarrySource);
@@ -184,8 +172,9 @@ let rec apply: (Model.t, t, 'b, ~schedule_action: 'a) => Model.t =
              ),
            )
       | InsertNewCell(sep_idx) =>
-        app(InsertCell(sep_idx, Core.Cell.init()), model)
-        |> app(SetAnimTargets(cell_targets_todo))
+        print_endline("setting anim targets to cells: InsertNewCell");
+        state.anim_targets = State.cell_targets_todo;
+        app(InsertCell(sep_idx, Core.Cell.init()), model);
       | ReorderCell(cell_idx, new_idx) =>
         let cell = Block.nth_cell(model.world, cell_idx);
         let new_idx = new_idx > cell_idx ? new_idx - 1 : new_idx;
@@ -225,7 +214,9 @@ let rec apply: (Model.t, t, 'b, ~schedule_action: 'a) => Model.t =
             |> app(Delete([Cell(Index(carry_idx, List.length(block)))]))
             |> app(InsertCell(new_idx, cell));
           // 5. restore cell from trash
-          | CellBrush(cell) => app(InsertCell(sep_idx, cell), model)
+          | CellBrush(cell) =>
+            state.anim_targets = State.cell_targets_todo;
+            app(InsertCell(sep_idx, cell), model);
           | _ => model
           }
         )
@@ -393,19 +384,19 @@ and apply_single:
     | SwapCellDown =>
       switch (current_path) {
       | [Cell(Index(cell_idx, k))] when cell_idx != k - 1 =>
+        state.anim_targets = State.cell_targets_todo;
         model
         |> app(ReorderCell(cell_idx + 1, cell_idx))
-        |> app(SetFocus(SingleCell([Cell(Index(cell_idx + 1, k))])))
-      //|> app(SetAnimTargets(cell_targets_todo))
+        |> app(SetFocus(SingleCell([Cell(Index(cell_idx + 1, k))])));
       | _ => model
       }
     | SwapCellUp =>
       switch (current_path) {
       | [Cell(Index(cell_idx, k))] when cell_idx != 0 =>
+        state.anim_targets = State.cell_targets_todo;
         model
         |> app(ReorderCell(cell_idx, cell_idx - 1))
-        |> app(SetFocus(SingleCell([Cell(Index(cell_idx - 1, k))])))
-      //|> app(SetAnimTargets(cell_targets_todo))
+        |> app(SetFocus(SingleCell([Cell(Index(cell_idx - 1, k))])));
       | _ => model
       }
     | MoveDown => update_focus(Path.down_path, model) //|> app(SetAnimTargets(["-1"]))
@@ -465,6 +456,7 @@ and apply_single:
         switch (words) {
         | Some([x]) when x == Word.empty =>
           // if only empty word, delete cell
+          state.anim_targets = State.cell_targets_todo;
           switch (current_path) {
           | [Cell(Index(0, l)), ..._] =>
             model
@@ -479,7 +471,7 @@ and apply_single:
             |> app(Delete([Cell(Index(cell_idx, l))]))
             |> app(SetFocus(SingleCell(new_path)));
           | _ => model
-          }
+          };
         | _ =>
           /* Operators cannot be directly backspaced; if we try to
              backspace an empty word after an operator, we'll delete

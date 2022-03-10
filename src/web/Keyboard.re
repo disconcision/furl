@@ -21,11 +21,10 @@ let keydown = (model: Model.t, key: string): list(Update.t) =>
 
 let keyup = (_model: Model.t, key: string): list(Update.t) =>
   switch (key) {
-  | "Shift" => [UpdateKeymap(km => {...km, shift: false})]
-  | "ArrowDown"
-  //| "ArrowUp" => [SetAnimTargets(Update.cell_targets_todo)]
+  | "Shift" => [Update.UpdateKeymap(km => {...km, shift: false})]
   | _ => []
   };
+//@ [Update.SetLastKey(KeyUp(key))];
 
 let seq = (~inj, updates) =>
   switch (updates) {
@@ -41,12 +40,15 @@ let handlers = (~inj: Update.t => Event.t, model: Model.t) => [
   Attr.on_keyup(evt => evt |> JsUtil.get_key |> keyup(model) |> seq(~inj)),
   Attr.on_keydown(evt => {
     let key = JsUtil.get_key(evt);
-    print_endline("key pressed:");
-    print_endline(key);
+    //print_endline("key pressed:");
+    //print_endline(key);
     let held = m => JsUtil.held(m, evt);
     let updates: list(Update.t) =
       if (!held(Ctrl) && !held(Alt) && !held(Meta)) {
-        keydown(model, key);
+        keydown(
+          model,
+          key // @ [SetLastKey(KeyDown(key))];
+        );
       } else if (! Os.is_mac^ && held(Ctrl) && !held(Alt) && !held(Meta)) {
         switch (key) {
         | "z" => held(Shift) ? [] : []
