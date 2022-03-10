@@ -252,19 +252,9 @@ let decr_word = (path: t): t =>
   | _ => path
   };
 
-let num_words_in_exp = (block, cell_idx) =>
-  Block.nth_cell(block, cell_idx) |> (x => x.expression) |> List.length;
-
-let is_exp_empty_word = (block, path, cell_idx) =>
-  num_words_in_exp(block, cell_idx) == 1
-  && get_word(path, block) == Some(Word.empty);
-
 let delete: (t, Block.t) => Block.t =
   (path, block) => {
     switch (path) {
-    //TODO: figure out why below was even a thing
-    //| [Cell(Index(cell_idx, _)), Field(Expression), _, ..._]
-    //    when is_exp_empty_word(block, path, cell_idx) => block
     | [
         Cell(Index(cell_idx, _)),
         Field(Expression),

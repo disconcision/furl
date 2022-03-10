@@ -454,12 +454,19 @@ and apply_single:
       | [Cell(Index(i, k))] =>
         let new_path = [Path.Cell(Index(i, k)), Field(Expression)];
         let length = Path.get_num_words(new_path, model.world);
-        app(
-          SetFocus(
-            SingleCell(new_path @ [Word(Index(length - 1, length))]),
-          ),
-          model,
-        );
+        if (length == 0) {
+          let new_path: Path.t = k == 1 ? [] : [Cell(Index(i - 1, k - 1))];
+          model
+          |> app(Delete(current_path))
+          |> app(SetFocus(SingleCell(new_path)));
+        } else {
+          app(
+            SetFocus(
+              SingleCell(new_path @ [Word(Index(length - 1, length))]),
+            ),
+            model,
+          );
+        };
       | _ =>
         switch (words) {
         | Some([x]) when x == Word.empty =>
