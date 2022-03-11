@@ -16,6 +16,7 @@ let keydown = (model: Model.t, key: string): list(Update.t) =>
   | " " => [UniFocus(InsertNewWordF)]
   | "Delete" => [UniFocus(DeleteF)]
   | "Backspace" => [UniFocus(Backspace)]
+  | "Escape" => [SetFocus(SingleCell([]))]
   | x => [UniFocus(InsertChar(x))]
   };
 

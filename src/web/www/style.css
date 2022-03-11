@@ -73,14 +73,26 @@
 
 body {
   background-image: radial-gradient(#f9a7fe 0.5px, #e8e2ff 1px);
-  background-size: 21px 21px;
+  background-size: 1.6rem 1.6rem;
+}
+
+#root {
+  min-height: 100vh;
+  padding: 5em;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 1.6rem;
+  display: flex;
+  justify-content: center;
 }
 
 .title {
+  position: fixed;
+  top: 0;
+  left: 0;
   font-size: 1.5em;
-    display: flex;
-    height: 3em;
-    transform: skewY(2deg) skewX(17deg);
+  display: flex;
+  height: 3em;
+  transform: scale(66%) skewY(2deg) skewX(17deg);
 }
 .title-f {
   position: relative;
@@ -120,17 +132,9 @@ body {
   text-shadow: 3px 0 #009aff;
 }
 
-#root {
-  height: 700px;
-  padding: 5em;
-  font-family: 'Press Start 2P', monospace;
-  font-size: 1.6rem;
-}
-
-
-
 .cells-view {
-  padding: 1em 0 4em 0;
+  width: 38em;
+  padding: 1em 0 1em 0;
 }
 
 .cell-view {
@@ -141,8 +145,6 @@ body {
   padding-left: 1em; /* HACK */
   cursor: pointer;
 }
-
-
 
 .cell-view.on-path {
   background-color: #d1ccf877;
@@ -269,16 +271,6 @@ body {
     /*transform: scale(135%);*/
 }
 
-/*
-.expression-atom:hover {
-  color: rgb(97, 74, 145);
-}
-
-.pattern-atom:hover {
-  color: #ffa1c4;
-}
-*/
-
 .atom.on-path, .atom.focussed {
   outline: solid 2px #e4ff00;
   background-color: #e4ff00;
@@ -293,7 +285,6 @@ body {
  .atom:hover,
  .pattern-atom.pat-atom-var:hover,
  .expression-view.expr-app .expression-atom:hover {
-  /*color: #9799f6;*/
   color: #00fbf1;
   text-shadow: 1px 2px #1ecdbb;
   transform: scale(1.13);
@@ -364,10 +355,12 @@ body {
 }
 
 .toolbar {
-  position: relative;
-  top: -1em;
+  position: fixed;
+  z-index: 1;
+  top: 0.6em;
+  right: 0.6em;
   background-color: #c4b4ff55;
-  transform: skew(-11deg, 1deg);
+  transform: skew(-3deg, 1deg);
   display: flex;
   flex-wrap: wrap;
   gap: 0.5em;
@@ -394,9 +387,10 @@ body {
 }
 
 .trash-panel {
-  position: absolute;
+  position: fixed;
   top: 0.5em;
-  left: 0.8em;
+  left: 5.8em;
+  z-index: 1;
   cursor: pointer;
 }
 
@@ -406,17 +400,18 @@ body {
 }
 
 .anim-control-panel {
-  position: absolute;
+  position: fixed;
   top: 0.5em;
-  left: 2.5em;
+  left: 7.5em;
+  z-index: 1;
   cursor: pointer;
-  /*filter: invert(40%) sepia(81%) saturate(1655%) hue-rotate(164deg) brightness(98%) contrast(103%);*/
 }
 
 .cell-control-panel {
-  position: absolute;
+  position: fixed;
   top: 0.7em;
-  left: 4.3em;
+  left: 9.3em;
+  z-index: 1;
   cursor: pointer;
   color: #f56197;
 }

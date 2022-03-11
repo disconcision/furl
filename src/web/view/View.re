@@ -118,13 +118,13 @@ let view = (~inj, ~model: Model.t) => {
       ...Keyboard.handlers(~inj, model),
     ],
     [
+      title_view(~inj, ~model),
       trash_panel(~inj, model.trash == []),
       anim_control_panel(~inj, model.animations_off),
       cell_control_panel(~inj, model.pattern_display),
       toolbar(~inj, ~model),
-      title_view(~inj, ~model),
-      BlockView.view(~inj, ~model, ~path, cells),
       trash_view(~inj, ~model),
+      BlockView.view(~inj, ~model, ~path, cells),
     ],
   );
 };

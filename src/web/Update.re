@@ -451,6 +451,9 @@ and apply_single:
       let remove_char = str => String.sub(str, 0, String.length(str) - 1);
       let words = Path.get_words(current_path, model.world);
       switch (current_path) {
+      | [] when Block.len(model.world) != 0 =>
+        let len = Block.len(model.world);
+        app(SetFocus(SingleCell([Cell(Index(len - 1, len))])), model);
       | [Cell(Index(i, k))] =>
         let new_path = [Path.Cell(Index(i, k)), Field(Expression)];
         let length = Path.get_num_words(new_path, model.world);
