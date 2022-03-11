@@ -142,21 +142,28 @@ body {
   cursor: pointer;
 }
 
-.cell-view.focussed {
-  background-color: #d1ccf899 !important;
-  outline: solid 0.2em #d1ccf899;
-  border-radius: 0px;
-}
+
 
 .cell-view.on-path {
-  background-color: #d1ccf877 !important;
+  background-color: #d1ccf877;
   outline: solid 0.2em #d1ccf877;
   border-radius: 0px;
 }
-
 .cell-view:hover {
   background-color: #caa2ff22;
   outline: solid 0.2em #caa2ff22;
+}
+.cell-view.focussed {
+  background-color: #fffa9d;
+  outline: solid 0.2em #fff881;
+  border-radius: 0px;
+  box-shadow: 0.2em 0.15em 0 0.2em #9799f6;
+}
+.cell-view.focussed .expression-view.expr-app,
+.cell-view.focussed .exp-atom-operator {
+  background-color: #fffff1;
+  outline: solid 0.3em #fffff0;
+  box-shadow: 0px 4px 0px 0.3em #9699f6;
 }
 
 .expression-view, .pattern-view, .value-view {
@@ -187,7 +194,6 @@ body {
   color: #e4ff03 !important;
   text-shadow: 2px 2px #140614, -2px -2px #cbc6cb;
 }
-
 
 .expression-view {
   position: relative;
@@ -347,7 +353,7 @@ body {
 }
 
 .cell-separator:hover:first-child, .cell-separator:hover:last-child {
-  outline: double 0.5em rgba(245 245 220 / 33%);
+  /*outline: double 0.5em rgba(245 245 220 / 33%);*/
 }
 .cell-separator:hover:not(:first-child):not(:last-child) {
   border-radius: 0.5em;
