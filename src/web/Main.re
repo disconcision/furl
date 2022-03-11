@@ -89,7 +89,7 @@ let on_display =
     //Util.P.p(sexp_of_bloo(new_coords));
     state.tracked_elems = new_coords;
     flip(old_coords, new_coords, state.anim_targets);
-    print_endline("setting anim_targets to empty");
+    //print_endline("setting anim_targets to empty");
     state.anim_targets = [];
   };
 
@@ -144,9 +144,9 @@ module App = {
     Component.create(
       ~apply_action=
         (update: Update.t, state: State.t, ~schedule_action) => {
-          Util.P.p(State.sexp_of_t(state));
+          //Util.P.p(State.sexp_of_t(state));
           let m = Web.Update.apply(model, update, state, ~schedule_action);
-          Util.P.p(State.sexp_of_t(state));
+          //Util.P.p(State.sexp_of_t(state));
           m;
         },
       /*

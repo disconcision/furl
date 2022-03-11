@@ -35,7 +35,6 @@ let cell_sep_view = (~inj, ~model: Model.t, sep_idx) => {
       Attr.on("drop", _ => stop(inj(DropOnCellSep(sep_idx)))),
       Attr.on("dragover", _ => {Event.Prevent_default}),
       Attr.on("dragenter", _ => prevent(inj(SetDropTarget(this_target)))),
-      //Attr.on("dragleave", _evt => inj(SetDropTarget(NoTarget))),
     ],
     [text("")],
   );
@@ -77,12 +76,8 @@ let cell_view =
       random_skew(string_of_int(idx)),
       Attr.id(string_of_int(uid)),
       Attr.classes(["cell-view", cell_focus_class(path)]),
-      Attr.on_click(set_focus(this_path, inj)),
       Attr.create("draggable", "true"),
-      /*
-        not sure if good idea... trying bcuz accidental drops on cell
-        when trying to hit sep...
-       */
+      Attr.on_click(set_focus(this_path, inj)),
       Attr.on("drop", _ => stop(inj(DropOnCellSep(idx + 1)))),
       Attr.on("dragstart", _ => stop(inj(Pickup(Cell(ann_cell))))),
       Attr.on("dragend", _ => inj(SetDropTarget(NoTarget))),

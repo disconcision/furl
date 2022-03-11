@@ -20,7 +20,7 @@ let title_view = (~model as _, ~inj as _) =>
     ],
   );
 
-let tool_atom_view = (~inj, ~model as _: Model.t, word): t => {
+let brush_view = (~inj, ~model as _: Model.t, word): t => {
   div(
     [
       random_offset(word),
@@ -35,11 +35,11 @@ let tool_atom_view = (~inj, ~model as _: Model.t, word): t => {
   );
 };
 
-let toolbar = (~inj, ~model): t =>
+let brushes_panel = (~inj, ~model): t =>
   div(
     [Attr.classes(["toolbar"])],
     List.map(
-      tool_atom_view(~inj, ~model),
+      brush_view(~inj, ~model),
       ["sum", "prod", "fact", "1337", "0", "1", "+", "*"],
     ),
   );
@@ -122,7 +122,7 @@ let view = (~inj, ~model: Model.t) => {
       trash_panel(~inj, model.trash == []),
       anim_control_panel(~inj, model.animations_off),
       cell_control_panel(~inj, model.pattern_display),
-      toolbar(~inj, ~model),
+      brushes_panel(~inj, ~model),
       trash_view(~inj, ~model),
       BlockView.view(~inj, ~model, ~path, cells),
     ],

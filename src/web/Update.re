@@ -173,7 +173,6 @@ let rec apply: (Model.t, t, 'b, ~schedule_action: 'a) => Model.t =
              ),
            )
       | InsertNewCell(sep_idx) =>
-        print_endline("setting anim targets to cells: InsertNewCell");
         state.anim_targets = State.cell_targets_todo;
         app(InsertCell(sep_idx, Core.Cell.init()), model);
       | ReorderCell(cell_idx, new_idx) =>
