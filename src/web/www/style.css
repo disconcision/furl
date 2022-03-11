@@ -134,6 +134,7 @@ body {
 
 .cells-view {
   width: 38em;
+  height: fit-content;
   padding: 1em 0 1em 0;
 }
 

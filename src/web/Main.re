@@ -1,20 +1,11 @@
 open Js_of_ocaml;
 open Incr_dom;
 open Web;
-
 open Sexplib.Std;
-[@deriving sexp]
-type bloo = list((string, (int, int)));
-
-let log = x => Js_of_ocaml.Firebug.console##log(x);
 
 let force_get_elem_by_id = id => {
   let doc = Dom_html.document;
-  Js.Opt.get(doc##getElementById(Js.string(id)), () => {
-    assert
-      (false)
-      //log(id);
-  });
+  Js.Opt.get(doc##getElementById(Js.string(id)), () => {assert(false)});
 };
 
 let get_coords = (id): 'a =>
@@ -28,8 +19,8 @@ let get_coords = (id): 'a =>
   | _ => State.init_coords
   };
 
-let request_frame = c => {
-  let _ = Dom_html.window##requestAnimationFrame(Js.wrap_callback(c));
+let request_frame = kont => {
+  let _ = Dom_html.window##requestAnimationFrame(Js.wrap_callback(kont));
   ();
 };
 
@@ -44,6 +35,8 @@ let set_style_or_dont = (elem_id, string) =>
 let delta_coords = ((new_x, new_y), (old_x, old_y)) =>
   (old_x, old_y) != State.init_coords
     ? (old_x - new_x, old_y - new_y) : (0, 0);
+
+let zero_style = ((id, _)) => set_style_or_dont(id, "");
 
 let set_style_init = ((id, (x, y))) =>
   Printf.sprintf(
@@ -67,31 +60,22 @@ let flip = (old_coords, new_coords, anim_targets) => {
       new_coords,
     )
     |> List.filter(((id, _)) => List.mem(id, anim_targets));
-  //Util.P.p(sexp_of_bloo(delta_coords));
   List.iter(set_style_init, delta_coords);
   request_frame(_ => List.iter(set_style_final, delta_coords));
 };
 
+let update_coords = (state: State.t) => {
+  let old_coords = state.tracked_elems;
+  let new_coords = List.map(((i, _)) => (i, get_coords(i)), old_coords);
+  //Util.P.p(State.sexp_of_tracked_elems(old_coords));
+  state.tracked_elems = new_coords;
+  flip(old_coords, new_coords, state.anim_targets);
+  state.anim_targets = [];
+};
+
 let on_display =
-    (
-      model: Model.t,
-      old_model,
-      //anim_targets,
-      state: State.t,
-      ~schedule_action as _,
-    ) =>
-  if (model.animations_off || model === old_model) {
-    ();
-  } else {
-    let old_coords = state.tracked_elems;
-    let new_coords = List.map(((i, _)) => (i, get_coords(i)), old_coords);
-    //Util.P.p(sexp_of_bloo(old_coords));
-    //Util.P.p(sexp_of_bloo(new_coords));
-    state.tracked_elems = new_coords;
-    flip(old_coords, new_coords, state.anim_targets);
-    //print_endline("setting anim_targets to empty");
-    state.anim_targets = [];
-  };
+    (model: Model.t, old_model, state: State.t, ~schedule_action as _) =>
+  model.animations_off || model === old_model ? () : update_coords(state);
 
 module App = {
   module Model = Model;
@@ -117,7 +101,7 @@ module App = {
      );
      */
 
-  let on_startup = (~schedule_action as _, _m: Model.t) => {
+  let on_startup = (~schedule_action, _m: Model.t) => {
     /*
      let _ =
        observe_font_specimen("font-specimen", fm =>
@@ -128,6 +112,7 @@ module App = {
          schedule_action(Web.Update.SetLogoFontMetrics(fm))
        );
        */
+    schedule_action(Update.DoNothing);
     Os.is_mac :=
       Dom_html.window##.navigator##.platform##toUpperCase##indexOf(
         Js.string("MAC"),

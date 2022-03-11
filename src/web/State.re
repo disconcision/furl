@@ -1,7 +1,7 @@
 open Sexplib.Std;
 
 [@deriving sexp]
-type tracked_elems = Core.Environment.t_((int, int));
+type tracked_elems = Core.Environment.t_(Model.screen_coords);
 
 [@deriving sexp]
 type t = {
@@ -9,7 +9,7 @@ type t = {
   mutable anim_targets: list(string),
 };
 
-let init_coords = ((-1), (-1));
+let init_coords: Model.screen_coords = ((-1), (-1));
 
 let cell_targets_todo = [
   "-1",

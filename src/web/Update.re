@@ -19,6 +19,7 @@ type single_focus_action =
 
 [@deriving sexp]
 type t =
+  | DoNothing
   | SetLastKey(Model.lastkey)
   | SetAnimTargetCells
   | SetFocus(Model.focus)
@@ -95,6 +96,7 @@ let rec apply: (Model.t, t, 'b, ~schedule_action: 'a) => Model.t =
     let app = (a, m) => apply(m, a, state, ~schedule_action);
     let model =
       switch (update) {
+      | DoNothing => model
       | SetLastKey(k) =>
         switch (model.lastkey, k) {
         | (KeyDown(qq), KeyDown(bb)) when qq == bb => state.anim_targets = []
@@ -369,6 +371,7 @@ and apply_single:
     switch (a) {
     | UpdateWord(f) => app(UpdateWord(current_path, f), model)
     | DeleteF =>
+      // TODO: set focus
       switch (model.focus) {
       | SingleCell(path) => app(Delete(path), model)
       }
