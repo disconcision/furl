@@ -3,79 +3,10 @@ open Incr_dom;
 open Web;
 open Sexplib.Std;
 
-let force_get_elem_by_id = id => {
-  let doc = Dom_html.document;
-  Js.Opt.get(doc##getElementById(Js.string(id)), () => {assert(false)});
-};
-
-let get_coords = (id): 'a =>
-  try({
-    let container_rect = force_get_elem_by_id(id)##getBoundingClientRect;
-    (
-      int_of_float(container_rect##.top),
-      int_of_float(container_rect##.left),
-    );
-  }) {
-  | _ => State.init_coords
-  };
-
-let request_frame = kont => {
-  let _ = Dom_html.window##requestAnimationFrame(Js.wrap_callback(kont));
-  ();
-};
-
-let set_style = (elem, string) =>
-  elem##setAttribute(Js.string("style"), Js.string(string));
-
-let set_style_or_dont = (elem_id, string) =>
-  try(set_style(force_get_elem_by_id(elem_id), string)) {
-  | _ => ()
-  };
-
-let delta_coords = ((new_x, new_y), (old_x, old_y)) =>
-  (old_x, old_y) != State.init_coords
-    ? (old_x - new_x, old_y - new_y) : (0, 0);
-
-let zero_style = ((id, _)) => set_style_or_dont(id, "");
-
-let set_style_init = ((id, (x, y))) =>
-  Printf.sprintf(
-    "transform:translate(%dpx, %dpx); transition: transform 0s;",
-    y,
-    x,
-  )
-  |> set_style_or_dont(id);
-
-let set_style_final = ((id, _)) =>
-  set_style_or_dont(
-    id,
-    "transform:none; transition: transform 150ms cubic-bezier(0.75, -0.5, 0.25, 1.5);",
-  );
-
-let flip = (old_coords, new_coords, anim_targets) => {
-  let delta_coords: Core.Environment.t_((int, int)) =
-    List.map2(
-      ((id, old), (_, nw)) => (id, delta_coords(nw, old)),
-      old_coords,
-      new_coords,
-    )
-    |> List.filter(((id, _)) => List.mem(id, anim_targets));
-  List.iter(set_style_init, delta_coords);
-  request_frame(_ => List.iter(set_style_final, delta_coords));
-};
-
-let update_coords = (state: State.t) => {
-  let old_coords = state.tracked_elems;
-  let new_coords = List.map(((i, _)) => (i, get_coords(i)), old_coords);
-  //Util.P.p(State.sexp_of_tracked_elems(old_coords));
-  state.tracked_elems = new_coords;
-  flip(old_coords, new_coords, state.anim_targets);
-  state.anim_targets = [];
-};
-
 let on_display =
     (model: Model.t, old_model, state: State.t, ~schedule_action as _) =>
-  model.animations_off || model === old_model ? () : update_coords(state);
+  model.animations_off || model === old_model
+    ? () : Animate.animate_coords(state);
 
 module App = {
   module Model = Model;

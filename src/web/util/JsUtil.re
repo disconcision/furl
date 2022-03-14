@@ -1,14 +1,31 @@
 open Js_of_ocaml;
+module Dom_html = Js_of_ocaml.Dom_html;
 
-let get_elem_by_id = id => {
-  let doc = Dom_html.document;
-  Js.Opt.get(
-    doc##getElementById(Js.string(id)),
-    () => {
-      print_endline(id);
-      assert(false);
-    },
-  );
+let get_elem_by_id_opt = id =>
+  try(
+    Some(
+      Js.Opt.get(Dom_html.document##getElementById(Js.string(id)), () => {
+        assert(false)
+      }),
+    )
+  ) {
+  | _ => None
+  };
+
+let set_elem_style = (elem, style: string) =>
+  try(elem##setAttribute(Js.string("style"), Js.string(style))) {
+  | _ => ()
+  };
+
+let set_style_by_id = (id: string, style: string) =>
+  switch (get_elem_by_id_opt(id)) {
+  | Some(elem) => set_elem_style(elem, style)
+  | None => ()
+  };
+
+let request_frame = kont => {
+  let _ = Dom_html.window##requestAnimationFrame(Js.wrap_callback(kont));
+  ();
 };
 
 type mod_key =
@@ -33,7 +50,6 @@ let date_now = () => {
   new Js.date_now;
 };
 
-module Dom_html = Js_of_ocaml.Dom_html;
 /*
  open WebAudio;
  let play_sound = () => {

@@ -21,7 +21,7 @@ type single_focus_action =
 type t =
   | DoNothing
   | SetLastKey(Model.lastkey)
-  | SetAnimTargetCells
+  //| SetAnimTargetCells
   | SetFocus(Model.focus)
   | UniFocus(single_focus_action)
   | Delete(Path.t)
@@ -99,13 +99,10 @@ let rec apply: (Model.t, t, 'b, ~schedule_action: 'a) => Model.t =
       | DoNothing => model
       | SetLastKey(k) =>
         switch (model.lastkey, k) {
-        | (KeyDown(qq), KeyDown(bb)) when qq == bb => state.anim_targets = []
+        | (KeyDown(qq), KeyDown(bb)) when qq == bb => ()
         | _ => ()
         };
         {...model, lastkey: k};
-      | SetAnimTargetCells =>
-        state.anim_targets = State.cell_targets_todo;
-        model;
       | SetFocus(focus) => update_focus(_ => focus, model)
       | Pickup(thing) => update_carry(_ => thing, model)
       | EmptyTrash => update_trash(_ => [], model)
@@ -155,7 +152,7 @@ let rec apply: (Model.t, t, 'b, ~schedule_action: 'a) => Model.t =
             | Some(cell) => cell
             | None => Cell.init()
             };
-          state.anim_targets = State.cell_targets_todo;
+          Animate.cells(state);
           model
           |> update_trash(trash => [TrashedCell(cell, coords), ...trash])
           |> app(DeleteCarrySource);
@@ -175,7 +172,7 @@ let rec apply: (Model.t, t, 'b, ~schedule_action: 'a) => Model.t =
              ),
            )
       | InsertNewCell(sep_idx) =>
-        state.anim_targets = State.cell_targets_todo;
+        Animate.cells(state);
         app(InsertCell(sep_idx, Core.Cell.init()), model);
       | ReorderCell(cell_idx, new_idx) =>
         let cell = Block.nth_cell(model.world, cell_idx);
@@ -208,15 +205,11 @@ let rec apply: (Model.t, t, 'b, ~schedule_action: 'a) => Model.t =
           | Cell({path: [Cell(Index(carry_idx, _)), ..._], _})
               when model.keymap.shift =>
             let cell = carry_idx |> Block.nth_cell(block) |> Cell.copy;
-            state.anim_targets =
-              State.cell_targets_todo
-              |> List.filter(cid => int_of_string(cid) != cell.uid);
+            Animate.cells_except(cell.uid, state);
             app(InsertCell(sep_idx, cell), model);
           // 4. cells get reordered otherwise
           | Cell({path: [Cell(Index(carry_idx, _)), ..._], uid, _}) =>
-            state.anim_targets =
-              State.cell_targets_todo
-              |> List.filter(cid => int_of_string(cid) != uid);
+            Animate.cells_except(uid, state);
             let cell = Block.nth_cell(block, carry_idx);
             let new_idx = sep_idx > carry_idx ? sep_idx - 1 : sep_idx;
             model
@@ -224,7 +217,7 @@ let rec apply: (Model.t, t, 'b, ~schedule_action: 'a) => Model.t =
             |> app(InsertCell(new_idx, cell));
           // 5. restore cell from trash
           | CellBrush(cell) =>
-            state.anim_targets = State.cell_targets_todo;
+            Animate.cells(state);
             app(InsertCell(sep_idx, cell), model);
           | _ => model
           }
@@ -394,7 +387,7 @@ and apply_single:
     | SwapCellDown =>
       switch (current_path) {
       | [Cell(Index(cell_idx, k))] when cell_idx != k - 1 =>
-        state.anim_targets = State.cell_targets_todo;
+        Animate.cells(state);
         model
         |> app(ReorderCell(cell_idx + 1, cell_idx))
         |> app(SetFocus(SingleCell([Cell(Index(cell_idx + 1, k))])));
@@ -403,7 +396,7 @@ and apply_single:
     | SwapCellUp =>
       switch (current_path) {
       | [Cell(Index(cell_idx, k))] when cell_idx != 0 =>
-        state.anim_targets = State.cell_targets_todo;
+        Animate.cells(state);
         model
         |> app(ReorderCell(cell_idx, cell_idx - 1))
         |> app(SetFocus(SingleCell([Cell(Index(cell_idx - 1, k))])));
@@ -476,7 +469,7 @@ and apply_single:
         switch (words) {
         | Some([x]) when x == Word.empty =>
           // if only empty word, delete cell
-          state.anim_targets = State.cell_targets_todo;
+          Animate.cells(state);
           switch (current_path) {
           | [Cell(Index(0, l)), ..._] =>
             model

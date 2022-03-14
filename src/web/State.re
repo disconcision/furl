@@ -4,28 +4,11 @@ open Sexplib.Std;
 type tracked_elems = Core.Environment.t_(Model.screen_coords);
 
 [@deriving sexp]
-type t = {
-  mutable tracked_elems,
-  mutable anim_targets: list(string),
-};
+type t = {mutable tracked_elems};
 
-let init_coords: Model.screen_coords = ((-1), (-1));
+let get_tracked_elems = (state: t): tracked_elems => state.tracked_elems;
 
-let cell_targets_todo = [
-  "-1",
-  "0",
-  "1",
-  "2",
-  "3",
-  "4",
-  "5",
-  "6",
-  "7",
-  "8",
-  "9",
-];
+let set_tracked_elems = (state: t, es: tracked_elems) =>
+  state.tracked_elems = es;
 
-let init_state: t = {
-  tracked_elems: List.map(id => (id, init_coords), cell_targets_todo),
-  anim_targets: [],
-};
+let init_state: t = {tracked_elems: []};

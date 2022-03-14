@@ -35,11 +35,13 @@ let nth_word: (Word.s, word_idx) => Word.t = List.nth;
 let update_word: (string => string, int, Word.s) => Word.s =
   (f, idx) => List.mapi((i, x) => i == idx ? f(x) : x);
 
-let cell_uid_gen = ref(0);
+let cell_uid_gen: ref(uid) = ref(0);
+let ids: ref(list(uid)) = ref([]);
 
 let mk_uid = (): int => {
   let uid = cell_uid_gen^;
   cell_uid_gen := cell_uid_gen^ + 1;
+  ids := [uid, ...ids^];
   uid;
 };
 
