@@ -1,13 +1,33 @@
-let error_coords: Model.screen_coords = ((-1), (-1));
+type props = {
+  coords: Model.screen_coords,
+  dims: (float, float),
+};
 
-let get_coords = (id): Model.screen_coords =>
-  switch (JsUtil.get_elem_by_id_opt(id)) {
-  | Some(elem) =>
-    let container_rect = elem##getBoundingClientRect;
-    (
+let mk_props = (elem: Js_of_ocaml.Js.t(JsUtil.Dom_html.element)) => {
+  let container_rect = elem##getBoundingClientRect;
+  {
+    coords: (
       int_of_float(container_rect##.top),
       int_of_float(container_rect##.left),
-    );
+    ),
+    dims: (
+      Js_of_ocaml.Js.Optdef.get(container_rect##.height, _ => (-1.0)),
+      Js_of_ocaml.Js.Optdef.get(container_rect##.width, _ => (-1.0)),
+    ),
+  };
+};
+
+let error_coords: Model.screen_coords = ((-1), (-1));
+
+let get_props = (id): option(props) =>
+  switch (JsUtil.get_elem_by_id_opt(id)) {
+  | Some(elem) => Some(mk_props(elem))
+  | None => None
+  };
+
+let get_coords = (id): Model.screen_coords =>
+  switch (get_props(id)) {
+  | Some({coords: (top, left), _}) => (top, left)
   | None => error_coords
   };
 
@@ -17,11 +37,13 @@ let delta_coords = ((new_x, new_y), (old_x, old_y)) =>
 let pos_timing_fn = "cubic-bezier(0.75, -0.5, 0.25, 1.5)";
 let pos_duration = "150ms";
 
-let init_transform = (x, y) =>
+let init_transform = (x, y, sx, sy) =>
   Printf.sprintf(
-    "transform:translate(%dpx, %dpx); transition: transform 0s;",
+    "transform:translate(%dpx, %dpx) scale(%f, %f); transition: transform 0s;",
     y,
     x,
+    sy,
+    sx,
   );
 
 let final_tranform =
@@ -32,7 +54,7 @@ let final_tranform =
   );
 
 let set_style_init = ((id, (x, y))) =>
-  JsUtil.set_style_by_id(id, init_transform(x, y));
+  JsUtil.set_style_by_id(id, init_transform(x, y, 1.0, 1.0));
 
 let set_style_final = ((id, _)) =>
   JsUtil.set_style_by_id(id, final_tranform);
