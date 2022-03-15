@@ -1,7 +1,7 @@
 open Sexplib.Std;
 
 [@deriving sexp]
-type tracked_elems = Core.Environment.t_(Model.screen_coords);
+type tracked_elems = Core.Environment.t_(option(Model.box));
 
 [@deriving sexp]
 type t = {mutable tracked_elems};

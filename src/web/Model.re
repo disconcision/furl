@@ -46,6 +46,14 @@ type trash_idx = int;
 type screen_coords = (int, int);
 
 [@deriving sexp]
+type box = {
+  top: int,
+  left: int,
+  width: float,
+  height: float,
+};
+
+[@deriving sexp]
 type trash_item =
   | TrashedCell(Cell.t, screen_coords)
   | TrashedWord(Word.t, screen_coords);

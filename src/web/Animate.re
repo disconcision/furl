@@ -1,38 +1,32 @@
-type props = {
-  coords: Model.screen_coords,
-  dims: (float, float),
-};
-
-let mk_props = (elem: Js_of_ocaml.Js.t(JsUtil.Dom_html.element)) => {
+let mk_props = (elem: Js_of_ocaml.Js.t(JsUtil.Dom_html.element)): Model.box => {
   let container_rect = elem##getBoundingClientRect;
   {
-    coords: (
-      int_of_float(container_rect##.top),
-      int_of_float(container_rect##.left),
-    ),
-    dims: (
-      Js_of_ocaml.Js.Optdef.get(container_rect##.height, _ => (-1.0)),
-      Js_of_ocaml.Js.Optdef.get(container_rect##.width, _ => (-1.0)),
-    ),
+    top: int_of_float(container_rect##.top),
+    left: int_of_float(container_rect##.left),
+    height: Js_of_ocaml.Js.Optdef.get(container_rect##.height, _ => (-1.0)),
+    width: Js_of_ocaml.Js.Optdef.get(container_rect##.width, _ => (-1.0)),
   };
 };
 
-let error_coords: Model.screen_coords = ((-1), (-1));
-
-let get_props = (id): option(props) =>
+let get_box = (id): option(Model.box) =>
   switch (JsUtil.get_elem_by_id_opt(id)) {
   | Some(elem) => Some(mk_props(elem))
   | None => None
   };
 
-let get_coords = (id): Model.screen_coords =>
-  switch (get_props(id)) {
-  | Some({coords: (top, left), _}) => (top, left)
-  | None => error_coords
-  };
+let delta_box = (init: Model.box, final: Model.box): Model.box => {
+  left: final.left - init.left,
+  top: final.top - init.top,
+  width: final.width -. init.width,
+  height: final.height -. init.height,
+};
 
-let delta_coords = ((new_x, new_y), (old_x, old_y)) =>
-  (old_x, old_y) != error_coords ? (old_x - new_x, old_y - new_y) : (0, 0);
+let delta_box_opt =
+    (init: option(Model.box), final: option(Model.box)): option(Model.box) =>
+  switch (final, init) {
+  | (Some(final), Some(init)) => Some(delta_box(init, final))
+  | _ => None
+  };
 
 let pos_timing_fn = "cubic-bezier(0.75, -0.5, 0.25, 1.5)";
 let pos_duration = "150ms";
@@ -53,8 +47,12 @@ let final_tranform =
     pos_timing_fn,
   );
 
-let set_style_init = ((id, (x, y))) =>
-  JsUtil.set_style_by_id(id, init_transform(x, y, 1.0, 1.0));
+let set_style_init = ((id, box: option(Model.box))) =>
+  switch (box) {
+  | None => ()
+  | Some(box) =>
+    JsUtil.set_style_by_id(id, init_transform(box.top, box.left, 1.0, 1.0))
+  };
 
 let set_style_final = ((id, _)) =>
   JsUtil.set_style_by_id(id, final_tranform);
@@ -62,13 +60,13 @@ let set_style_final = ((id, _)) =>
 let set_init_coords = (target_ids: list(string), state: State.t) =>
   State.set_tracked_elems(
     state,
-    List.map(i => (i, get_coords(i)), target_ids),
+    List.map(i => (i, get_box(i)), target_ids),
   );
 
 let animate_coords = (state: State.t) => {
   let delta_coords =
     List.map(
-      ((id, old)) => (id, delta_coords(get_coords(id), old)),
+      ((id, box)) => (id, delta_box_opt(get_box(id), box)),
       State.get_tracked_elems(state),
     );
   List.iter(set_style_init, delta_coords);
