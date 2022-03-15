@@ -172,8 +172,9 @@ let rec apply: (Model.t, t, 'b, ~schedule_action: 'a) => Model.t =
              ),
            )
       | InsertNewCell(sep_idx) =>
-        Animate.cells(state);
-        app(InsertCell(sep_idx, Core.Cell.init()), model);
+        let cell = Core.Cell.init();
+        Animate.cells_and(cell.uid, state);
+        app(InsertCell(sep_idx, cell), model);
       | ReorderCell(cell_idx, new_idx) =>
         let cell = Block.nth_cell(model.world, cell_idx);
         let new_idx = new_idx > cell_idx ? new_idx - 1 : new_idx;

@@ -40,6 +40,13 @@ let init_transform = (x, y, sx, sy) =>
     sx,
   );
 
+let init_transform_scale = (sx, sy) =>
+  Printf.sprintf(
+    "transform: scale(%f, %f); transition: transform 0s;",
+    sy,
+    sx,
+  );
+
 let final_tranform =
   Printf.sprintf(
     "transform:none; transition: transform %s %s;",
@@ -49,7 +56,9 @@ let final_tranform =
 
 let set_style_init = ((id, box: option(Model.box))) =>
   switch (box) {
-  | None => ()
+  | None =>
+    // For now, scale up newly inserted elements
+    JsUtil.set_style_by_id(id, init_transform_scale(0.0, 0.0))
   | Some(box) =>
     JsUtil.set_style_by_id(id, init_transform(box.top, box.left, 1.0, 1.0))
   };
@@ -64,13 +73,13 @@ let set_init_coords = (target_ids: list(string), state: State.t) =>
   );
 
 let animate_coords = (state: State.t) => {
-  let delta_coords =
+  let delta_box =
     List.map(
       ((id, box)) => (id, delta_box_opt(get_box(id), box)),
       State.get_tracked_elems(state),
     );
-  List.iter(set_style_init, delta_coords);
-  JsUtil.request_frame(_ => List.iter(set_style_final, delta_coords));
+  List.iter(set_style_init, delta_box);
+  JsUtil.request_frame(_ => List.iter(set_style_final, delta_box));
   State.set_tracked_elems(state, []);
 };
 
@@ -80,5 +89,11 @@ let cells = (state: State.t) =>
 let cells_except = (id: Core.Cell.uid, state: State.t) =>
   set_init_coords(
     Core.Cell.ids^ |> List.filter((!=)(id)) |> List.map(string_of_int),
+    state,
+  );
+
+let cells_and = (id: Core.Cell.uid, state: State.t) =>
+  set_init_coords(
+    Core.Cell.ids^ |> List.cons(id) |> List.map(string_of_int),
     state,
   );
