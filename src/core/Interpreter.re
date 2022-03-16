@@ -60,6 +60,11 @@ let rec eval_expression: (env, Expression.t) => option(Expression.lit) =
     | App(Fact, _)
     | Seq(Not | Fact, _)
     | Let(_) => None
+    | Seq(And, xs)
+    | App(And, xs) => xs |> eval_all(env) |> bin_op_bool((&&), true)
+    | Seq(Or, xs)
+    | App(Or, xs) => xs |> eval_all(env) |> bin_op_bool((||), false)
+    //| App(And | Or, _) => failwith("TODO eval_expression")
     };
   }
 and bin_op_int_float = (int_op, float_op, int_id, xs) => {
@@ -77,6 +82,18 @@ and bin_op_int_float = (int_op, float_op, int_id, xs) => {
       | _ => None
       },
     Some(IntLit(int_id)),
+    xs,
+  );
+}
+and bin_op_bool = (bool_op, bool_id, xs) => {
+  List.fold_left(
+    (acc: option(Expression.lit), v: option(Expression.lit)) =>
+      switch (acc, v) {
+      | (Some(BoolLit(n)), Some(BoolLit(m))) =>
+        Some(BoolLit(bool_op(n, m)))
+      | _ => None
+      },
+    Some(BoolLit(bool_id)),
     xs,
   );
 }

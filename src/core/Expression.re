@@ -3,12 +3,16 @@ open Sexplib.Std;
 [@deriving sexp]
 type prim =
   | Not
+  | And
+  | Or
   | Add
   | Mult
   | Fact;
 
 [@deriving sexp]
 type operator =
+  | AndOp
+  | OrOp
   | Times
   | Plus
   | Minus;
@@ -40,16 +44,21 @@ let string_of_lit: lit => string =
   | FloatLit(f) => string_of_float(f)
   | Indet(_) => "??";
 
+let prims = ["not", "and", "or", "sum", "prod", "fact"];
 let prim_of_string: string => option(prim) =
   fun
+  | "not" => Some(Not)
+  | "and" => Some(And)
+  | "or" => Some(Or)
   | "sum" => Some(Add)
   | "prod" => Some(Mult)
   | "fact" => Some(Fact)
-  | "not" => Some(Not)
   | _ => None;
 
 let parse_operator: string => option(operator) =
   fun
+  | "&" => Some(AndOp)
+  | "|" => Some(OrOp)
   | "*" => Some(Times)
   | "+" => Some(Plus)
   | "-" => Some(Minus)
@@ -114,6 +123,12 @@ and parse_tail_seq = (words, xs, parse_word, ctx): option((prim, list('a))) =>
   | [] => Some((Mult, [])) //TODO: this is not clear
   | [op, x1, ...xs] =>
     switch (parse_operator(op), parse_tail_seq(words, xs, parse_word, ctx)) {
+    | (Some(AndOp), Some((And, ps)))
+    | (Some(AndOp), Some((_, [] as ps))) =>
+      Some((And, [parse_word(x1), ...ps]))
+    | (Some(OrOp), Some((Or, ps)))
+    | (Some(OrOp), Some((_, [] as ps))) =>
+      Some((Or, [parse_word(x1), ...ps]))
     | (Some(Times), Some((Mult, ps)))
     | (Some(Times), Some((_, [] as ps))) =>
       Some((Mult, [parse_word(x1), ...ps]))

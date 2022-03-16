@@ -166,12 +166,8 @@ let annotate_cell: (Path.ctx, Path.t, int, int, Cell.t) => annotated_cell =
     };
   };
 
-let init_ctx = [
-  ("sum", [Path.Cell(Index(-1, -1))]),
-  ("prod", [Path.Cell(Index(-1, -1))]),
-  ("fact", [Path.Cell(Index(-1, -1))]),
-  ("not", [Path.Cell(Index(-1, -1))]),
-]; //TODO
+let init_ctx =
+  List.map(p => (p, [Path.Cell(Index(-1, -1))]), Expression.prims);
 
 let forward_pass: Block.t => t =
   block => {
