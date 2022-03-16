@@ -75,6 +75,17 @@ let prim_of_string: string => option(prim) =
   | "asc" => Some(LessThan)
   | _ => None;
 
+let prim_of: operator => option(prim) =
+  fun
+  | AndOp => Some(And)
+  | OrOp => Some(Or)
+  | Times => Some(Mult)
+  | Plus => Some(Add)
+  | EqualOp => Some(Equal)
+  | LessThanOp => Some(LessThan)
+  | MoreThanOp => Some(MoreThan)
+  | Minus => None;
+
 let parse_operator: string => option(operator) =
   fun
   | "&" => Some(AndOp)
@@ -101,6 +112,11 @@ let parse_lit: Word.t => option(lit) =
     | (_, _, Some(f)) => Some(FloatLit(f))
     | _ => None
     };
+
+type parse_tail_res =
+  | Failure
+  | Any
+  | Success(prim, list(t));
 
 //TODO: combine with below
 let parse_atom: (Path.ctx, Word.t) => atom =
@@ -134,43 +150,30 @@ let rec parse: (Path.ctx, Word.s) => t =
       switch (prim_of_string(x)) {
       | Some(fn) => App(fn, List.map(parse_word, xs))
       | _ =>
-        switch (parse_tail_seq(words, xs, parse_word, ctx)) {
-        | Some((op, ps)) => Seq(op, [parse_word(x), ...ps])
-        | None => Unknown(words)
+        switch (parse_tail_seq(xs, parse_word, ctx)) {
+        | Success(op, ps) => Seq(op, [parse_word(x), ...ps])
+        | Any
+        | Failure => Unknown(words)
         }
       }
     };
   }
-and parse_tail_seq = (words, xs, parse_word, ctx): option((prim, list('a))) =>
+and parse_tail_seq = (xs, parse_word, ctx): parse_tail_res =>
   switch (xs) {
-  | [] => Some((Mult, [])) //TODO: this is not clear
+  | [] => Any
   | [op, x1, ...xs] =>
-    switch (parse_operator(op), parse_tail_seq(words, xs, parse_word, ctx)) {
-    | (Some(AndOp), Some((And, ps)))
-    | (Some(AndOp), Some((_, [] as ps))) =>
-      Some((And, [parse_word(x1), ...ps]))
-    | (Some(OrOp), Some((Or, ps)))
-    | (Some(OrOp), Some((_, [] as ps))) =>
-      Some((Or, [parse_word(x1), ...ps]))
-    | (Some(Times), Some((Mult, ps)))
-    | (Some(Times), Some((_, [] as ps))) =>
-      Some((Mult, [parse_word(x1), ...ps]))
-    | (Some(Plus), Some((Add, ps)))
-    | (Some(Plus), Some((_, [] as ps))) =>
-      Some((Add, [parse_word(x1), ...ps]))
-    | (Some(Minus), Some((Add, ps)))
-    | (Some(Minus), Some((_, [] as ps))) =>
-      Some((Add, [parse_word("-" ++ x1), ...ps]))
-    | (Some(EqualOp), Some((Equal, ps)))
-    | (Some(EqualOp), Some((_, [] as ps))) =>
-      Some((Equal, [parse_word(x1), ...ps]))
-    | (Some(LessThanOp), Some((LessThan, ps)))
-    | (Some(LessThanOp), Some((_, [] as ps))) =>
-      Some((LessThan, [parse_word(x1), ...ps]))
-    | (Some(MoreThanOp), Some((MoreThan, ps)))
-    | (Some(MoreThanOp), Some((_, [] as ps))) =>
-      Some((MoreThan, [parse_word(x1), ...ps]))
-    | _ => None
+    switch (parse_operator(op), parse_tail_seq(xs, parse_word, ctx)) {
+    | (Some(Minus), Success(Add, ps)) =>
+      Success(Add, [parse_word("-" ++ x1), ...ps])
+    | (Some(Minus), Any) => Success(Add, [parse_word("-" ++ x1)])
+    | (Some(op), Success(prim, ps)) when prim_of(op) == Some(prim) =>
+      Success(prim, [parse_word(x1), ...ps])
+    | (Some(op), Any) when prim_of(op) != None =>
+      switch (prim_of(op)) {
+      | Some(prim) => Success(prim, [parse_word(x1)])
+      | None => failwith("parse_tail_seq impossible")
+      }
+    | _ => Failure
     }
-  | _ => None
+  | _ => Failure
   };
