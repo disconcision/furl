@@ -36,7 +36,34 @@ let ty_of_lit: Expression.lit => ty =
 let all_types_are = (ty: ty, xs: list(Expression.lit)) =>
   List.for_all(lit => lit |> ty_of_lit |> (==)(ty), xs);
 
-let rec eval_expression: (env, Expression.t) => option(Expression.lit) =
+let rec adjacent_pairs: list('a) => list(('a, 'a)) =
+  fun
+  | []
+  | [_] => []
+  | [a, b, ...cs] => [(a, b)] @ adjacent_pairs([b, ...cs]);
+
+let rec bin_op_int_float =
+        (
+          int_op,
+          float_op,
+          a: option(Expression.lit),
+          b: option(Expression.lit),
+        ) => {
+  switch (a, b) {
+  | (Some(IntLit(n)), Some(IntLit(m))) => Some(int_op(n, m))
+  | (Some(FloatLit(n)), Some(FloatLit(m))) => Some(float_op(n, m))
+  | (Some(IntLit(n)), Some(FloatLit(f))) when Float.is_integer(f) =>
+    Some(int_op(n, Int.of_float(f)))
+  | (Some(FloatLit(f)), Some(IntLit(i)))
+  | (Some(IntLit(i)), Some(FloatLit(f))) =>
+    Some(float_op(f, Float.of_int(i)))
+  | _ => None
+  };
+}
+and fold_bin_op_int_float = (int_op, float_op, int_id: Expression.lit, xs) => {
+  List.fold_left(bin_op_int_float(int_op, float_op), Some(int_id), xs);
+}
+and eval_expression: (env, Expression.t) => option(Expression.lit) =
   (env, form) => {
     switch (form) {
     | Unknown(_) => None
@@ -48,10 +75,23 @@ let rec eval_expression: (env, Expression.t) => option(Expression.lit) =
       }
     | App(Not, _) => None
     | App(Add, xs)
-    | Seq(Add, xs) => xs |> eval_all(env) |> bin_op_int_float((+), (+.), 0)
+    | Seq(Add, xs) =>
+      xs
+      |> eval_all(env)
+      |> fold_bin_op_int_float(
+           (n, m) => IntLit(n + m),
+           (n, m) => FloatLit(n +. m),
+           IntLit(0),
+         )
     | App(Mult, xs)
     | Seq(Mult, xs) =>
-      xs |> eval_all(env) |> bin_op_int_float(( * ), ( *. ), 1)
+      xs
+      |> eval_all(env)
+      |> fold_bin_op_int_float(
+           (n, m) => IntLit(n * m),
+           (n, m) => FloatLit(n *. m),
+           IntLit(1),
+         )
     | App(Fact, [x]) =>
       switch (eval_expression(env, x)) {
       | Some(IntLit(n)) => Some(IntLit(factorial(n)))
@@ -60,31 +100,43 @@ let rec eval_expression: (env, Expression.t) => option(Expression.lit) =
     | App(Fact, _)
     | Seq(Not | Fact, _)
     | Let(_) => None
+    // TODO: below ops should be short-circuiting
     | Seq(And, xs)
     | App(And, xs) => xs |> eval_all(env) |> bin_op_bool((&&), true)
     | Seq(Or, xs)
     | App(Or, xs) => xs |> eval_all(env) |> bin_op_bool((||), false)
-    //| App(And | Or, _) => failwith("TODO eval_expression")
+    | Seq(Equal, xs)
+    | App(Equal, xs) =>
+      // TODO: should this cast floats/ints?
+      switch (eval_all(env, xs)) {
+      | [a, b] => Some(BoolLit(a == b))
+      | _ => None
+      }
+    | Seq((MoreThan | LessThan) as op, xs)
+    | App((MoreThan | LessThan) as op, xs) =>
+      let (op_int, op_float) =
+        switch (op) {
+        | MoreThan =>
+          let op = (n, m) => Expression.BoolLit(n > m);
+          (op, op);
+        | LessThan =>
+          let op = (n, m) => Expression.BoolLit(n < m);
+          (op, op);
+        | _ => failwith("eval_expression impossible")
+        };
+      let ap = xs |> eval_all(env) |> adjacent_pairs;
+      List.fold_left(
+        (acc, (a, b)) =>
+          switch (acc, bin_op_int_float(op_int, op_float, a, b)) {
+          | (Some(Expression.BoolLit(true)), Some(BoolLit(true))) =>
+            Some(BoolLit(true))
+          | _ => Some(BoolLit(false))
+          },
+        Some(BoolLit(true)),
+        ap,
+      );
     };
   }
-and bin_op_int_float = (int_op, float_op, int_id, xs) => {
-  List.fold_left(
-    (acc: option(Expression.lit), v: option(Expression.lit)) =>
-      switch (acc, v) {
-      | (Some(IntLit(n)), Some(IntLit(m))) => Some(IntLit(int_op(n, m)))
-      | (Some(IntLit(n)), Some(FloatLit(f))) when Float.is_integer(f) =>
-        Some(IntLit(int_op(n, Int.of_float(f))))
-      | (Some(FloatLit(n)), Some(FloatLit(m))) =>
-        Some(FloatLit(float_op(n, m)))
-      | (Some(FloatLit(n)), Some(IntLit(i)))
-      | (Some(IntLit(i)), Some(FloatLit(n))) =>
-        Some(FloatLit(float_op(n, Float.of_int(i))))
-      | _ => None
-      },
-    Some(IntLit(int_id)),
-    xs,
-  );
-}
 and bin_op_bool = (bool_op, bool_id, xs) => {
   List.fold_left(
     (acc: option(Expression.lit), v: option(Expression.lit)) =>
@@ -97,16 +149,6 @@ and bin_op_bool = (bool_op, bool_id, xs) => {
     xs,
   );
 }
-and bin_op = (int_op, int_op_identity, env, xs) =>
-  List.fold_left(
-    (acc, x) =>
-      switch (acc, eval_expression(env, x)) {
-      | (Some(n), Some(m)) => Some(int_op(n, m))
-      | _ => None
-      },
-    Some(int_op_identity),
-    xs,
-  )
 
 and eval_all: (env, list(Expression.t)) => list(option(Expression.lit)) =
   (env, xs) => xs |> List.map(eval_expression(env))

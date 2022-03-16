@@ -7,7 +7,10 @@ type prim =
   | Or
   | Add
   | Mult
-  | Fact;
+  | Fact
+  | Equal
+  | LessThan
+  | MoreThan;
 
 [@deriving sexp]
 type operator =
@@ -15,7 +18,10 @@ type operator =
   | OrOp
   | Times
   | Plus
-  | Minus;
+  | Minus
+  | EqualOp
+  | LessThanOp
+  | MoreThanOp;
 
 [@deriving sexp]
 type t =
@@ -44,7 +50,18 @@ let string_of_lit: lit => string =
   | FloatLit(f) => string_of_float(f)
   | Indet(_) => "??";
 
-let prims = ["not", "and", "or", "sum", "prod", "fact"];
+let prims = [
+  "not",
+  "and",
+  "or",
+  "sum",
+  "prod",
+  "fact",
+  "desc",
+  "asc",
+  "equal",
+];
+
 let prim_of_string: string => option(prim) =
   fun
   | "not" => Some(Not)
@@ -53,6 +70,9 @@ let prim_of_string: string => option(prim) =
   | "sum" => Some(Add)
   | "prod" => Some(Mult)
   | "fact" => Some(Fact)
+  | "equal" => Some(Equal)
+  | "desc" => Some(MoreThan)
+  | "asc" => Some(LessThan)
   | _ => None;
 
 let parse_operator: string => option(operator) =
@@ -62,6 +82,9 @@ let parse_operator: string => option(operator) =
   | "*" => Some(Times)
   | "+" => Some(Plus)
   | "-" => Some(Minus)
+  | "=" => Some(EqualOp)
+  | "<" => Some(LessThanOp)
+  | ">" => Some(MoreThanOp)
   | _ => None;
 
 let is_operator: string => bool = s => parse_operator(s) != None;
@@ -138,6 +161,15 @@ and parse_tail_seq = (words, xs, parse_word, ctx): option((prim, list('a))) =>
     | (Some(Minus), Some((Add, ps)))
     | (Some(Minus), Some((_, [] as ps))) =>
       Some((Add, [parse_word("-" ++ x1), ...ps]))
+    | (Some(EqualOp), Some((Equal, ps)))
+    | (Some(EqualOp), Some((_, [] as ps))) =>
+      Some((Equal, [parse_word(x1), ...ps]))
+    | (Some(LessThanOp), Some((LessThan, ps)))
+    | (Some(LessThanOp), Some((_, [] as ps))) =>
+      Some((LessThan, [parse_word(x1), ...ps]))
+    | (Some(MoreThanOp), Some((MoreThan, ps)))
+    | (Some(MoreThanOp), Some((_, [] as ps))) =>
+      Some((MoreThan, [parse_word(x1), ...ps]))
     | _ => None
     }
   | _ => None
