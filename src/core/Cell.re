@@ -45,11 +45,14 @@ let mk_uid = (): int => {
   uid;
 };
 
-let init_num: int => (Word.t, t) =
-  n => {
+//TODO: betterize this (cyclical dep withe Expr issue)
+let init_w: Word.t => (Word.t, t) =
+  w_exp => {
     let w = Word.mk();
-    let n = string_of_int(n);
-    (w, {pattern: [w], expression: [n], value: [n], uid: mk_uid()});
+    (
+      w,
+      {pattern: [w], expression: [w_exp], value: [w_exp], uid: mk_uid()},
+    );
   };
 
 let init_name: Word.t => t =

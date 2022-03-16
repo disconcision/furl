@@ -170,6 +170,7 @@ let init_ctx = [
   ("sum", [Path.Cell(Index(-1, -1))]),
   ("prod", [Path.Cell(Index(-1, -1))]),
   ("fact", [Path.Cell(Index(-1, -1))]),
+  ("not", [Path.Cell(Index(-1, -1))]),
 ]; //TODO
 
 let forward_pass: Block.t => t =

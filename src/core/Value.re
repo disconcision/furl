@@ -1,8 +1,6 @@
-open Sexplib.Std;
-
 [@deriving sexp]
 type atom =
-  | Lit(int)
+  | Lit(Expression.lit)
   | Unknown(Word.t);
 
 [@deriving sexp]
@@ -12,7 +10,7 @@ type t =
 
 let parse_atom: Word.t => atom =
   w =>
-    switch (int_of_string_opt(w)) {
+    switch (Expression.parse_lit(w)) {
     | Some(n) => Lit(n)
     | None => Unknown(w)
     };

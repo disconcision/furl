@@ -191,12 +191,13 @@ let rec apply: (Model.t, t, 'b, ~schedule_action: 'a) => Model.t =
             let cell = Cell.init_name(name);
             app(InsertCell(sep_idx, cell), model);
           // 2. literals get abstracted
-          | WordExp({form: Lit(n), path, _})
+          | WordExp({form: Lit(lit), path, _})
               when Path.is_cell_idx((==)(sep_idx), path) =>
             switch (Path.cell_idx(path)) {
             | Some(i) when sep_idx == i =>
               let incr_path = Path.update_cell_idx((+)(1), path);
-              let (new_name, cell) = Cell.init_num(n);
+              let (new_name, cell) =
+                Cell.init_w(Expression.string_of_lit(lit));
               model
               |> app(InsertCell(sep_idx, cell))
               |> app(UpdateWord(incr_path, _ => new_name));
