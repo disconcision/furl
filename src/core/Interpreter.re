@@ -51,12 +51,13 @@ let rec bin_op_int_float =
           b: option(Expression.lit),
         ) => {
   switch (a, b) {
-  | (Some(IntLit(n)), Some(IntLit(m))) => Some(int_op(n, m))
-  | (Some(FloatLit(n)), Some(FloatLit(m))) => Some(float_op(n, m))
-  | (Some(IntLit(n)), Some(FloatLit(f))) when Float.is_integer(f) =>
-    Some(int_op(n, Int.of_float(f)))
-  | (Some(FloatLit(f)), Some(IntLit(i)))
+  | (Some(IntLit(i1)), Some(IntLit(i2))) => Some(int_op(i1, i2))
+  | (Some(FloatLit(f1)), Some(FloatLit(f2))) => Some(float_op(f1, f2))
+  /*| (Some(IntLit(i)), Some(FloatLit(f))) when Float.is_integer(f) =>
+    Some(int_op(i, Int.of_float(f)))*/
   | (Some(IntLit(i)), Some(FloatLit(f))) =>
+    Some(float_op(Float.of_int(i), f))
+  | (Some(FloatLit(f)), Some(IntLit(i))) =>
     Some(float_op(f, Float.of_int(i)))
   | _ => None
   };
