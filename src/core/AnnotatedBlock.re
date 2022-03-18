@@ -1,6 +1,17 @@
 open Sexplib.Std;
 
 [@deriving sexp]
+type dynamic_error =
+  | WrongSyntax
+  | WrongType
+  | Unbound;
+
+[@deriving sexp]
+type dynamic_status =
+  | FineThanks
+  | Error(dynamic_error);
+
+[@deriving sexp]
 type annotated_word_val = {
   path: Path.t,
   form: Value.atom,
@@ -19,6 +30,7 @@ type annotated_word_exp = {
   path: Path.t,
   form: Expression.atom,
   word: Word.t,
+  dynamic_status,
 };
 
 [@deriving sexp]
@@ -86,6 +98,7 @@ let annotate_expression_word = (context, path, length, idx, word) => {
     path: path @ [Path.Word(Index(idx, length))],
     form: Expression.parse_atom(context, word),
     word,
+    dynamic_status: FineThanks,
   };
 };
 

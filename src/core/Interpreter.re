@@ -64,17 +64,40 @@ let rec bin_op_int_float =
 and fold_bin_op_int_float = (int_op, float_op, int_id: Expression.lit, xs) => {
   List.fold_left(bin_op_int_float(int_op, float_op), Some(int_id), xs);
 }
+and all = (xs: list(option(Expression.lit))) =>
+  List.fold_left(
+    (acc: option(Expression.lit), x: option(Expression.lit)) =>
+      switch (acc, x) {
+      | (Some(BoolLit(true)), Some(BoolLit(true))) =>
+        Some(BoolLit(true))
+      | _ => Some(BoolLit(false))
+      },
+    Some(BoolLit(true)),
+    xs,
+  )
 and eval_expression: (env, Expression.t) => option(Expression.lit) =
   (env, form) => {
     switch (form) {
     | Unknown(_) => None
     | Atom(a) => eval_atom(a, env)
-    | App(Not, [x]) =>
-      switch (eval_expression(env, x)) {
-      | Some(BoolLit(b)) => Some(BoolLit(!b))
+    | App(Not, xs) =>
+      switch (xs) {
+      | [x] =>
+        switch (eval_expression(env, x)) {
+        | Some(BoolLit(b)) => Some(BoolLit(!b))
+        | _ => None
+        }
       | _ => None
       }
-    | App(Not, _) => None
+    | App(Fact, xs) =>
+      switch (xs) {
+      | [x] =>
+        switch (eval_expression(env, x)) {
+        | Some(IntLit(n)) => Some(IntLit(factorial(n)))
+        | _ => None
+        }
+      | _ => None
+      }
     | App(Add, xs)
     | Seq(Add, xs) =>
       xs
@@ -93,27 +116,23 @@ and eval_expression: (env, Expression.t) => option(Expression.lit) =
            (n, m) => FloatLit(n *. m),
            IntLit(1),
          )
-    | App(Fact, xs) =>
-      switch (xs) {
-      | [x] =>
-        switch (eval_expression(env, x)) {
-        | Some(IntLit(n)) => Some(IntLit(factorial(n)))
-        | _ => None
-        }
-      | _ => None
-      }
+
     // TODO: below ops should be short-circuiting
     | Seq(And, xs)
     | App(And, xs) => xs |> eval_all(env) |> bin_op_bool((&&), true)
     | Seq(Or, xs)
     | App(Or, xs) => xs |> eval_all(env) |> bin_op_bool((||), false)
-    | Seq((MoreThan | LessThan | Equal) as op, xs)
-    | App((MoreThan | LessThan | Equal) as op, xs) =>
+    | Seq(Equal, xs)
+    | App(Equal, xs) =>
+      xs
+      |> eval_all(env)
+      |> adjacent_pairs
+      |> List.map(((a, b)) => Some(Expression.BoolLit(a == b)))
+      |> all
+    | Seq((MoreThan | LessThan) as op, xs)
+    | App((MoreThan | LessThan) as op, xs) =>
       let (op_int, op_float) =
         switch (op) {
-        | Equal =>
-          let op = (n, m) => Expression.BoolLit(n == m);
-          (op, op);
         | MoreThan =>
           let op = (n, m) => Expression.BoolLit(n > m);
           (op, op);
@@ -122,17 +141,11 @@ and eval_expression: (env, Expression.t) => option(Expression.lit) =
           (op, op);
         | _ => failwith("eval_expression impossible")
         };
-      let ap = xs |> eval_all(env) |> adjacent_pairs;
-      List.fold_left(
-        (acc: option(Expression.lit), (a, b)) =>
-          switch (acc, bin_op_int_float(op_int, op_float, a, b)) {
-          | (Some(BoolLit(true)), Some(BoolLit(true))) =>
-            Some(BoolLit(true))
-          | _ => Some(BoolLit(false))
-          },
-        Some(BoolLit(true)),
-        ap,
-      );
+      xs
+      |> eval_all(env)
+      |> adjacent_pairs
+      |> List.map(((a, b)) => bin_op_int_float(op_int, op_float, a, b))
+      |> all;
     | Seq(Not | Fact, _)
     | Let(_) => None
     };
@@ -179,21 +192,14 @@ let run_block: Block.t => Block.t =
         let value =
           switch (result) {
           | None => ["?"]
-          | Some(lit) =>
-            switch (lit) {
-            | BoolLit(b) => [string_of_bool(b)]
-            | IntLit(n) => [string_of_int(n)]
-            | FloatLit(f) => [string_of_float(f)]
-            | Indet(_) => ["??"]
-            }
+          | Some(lit) => [Expression.string_of_lit(lit)]
           };
         let expression =
           List.map(
             ({word, _}: AnnotatedBlock.annotated_word_exp) => word,
             expression.words,
           );
-        let new_cell: Cell.t = {pattern, expression, value, uid};
-        let new_block = block_acc @ [new_cell];
+        let new_block = block_acc @ [{pattern, expression, value, uid}];
         (new_block, new_env);
       },
       ([], Environment.empty),
