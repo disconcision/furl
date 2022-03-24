@@ -1,7 +1,6 @@
 open Update;
 open Core;
 open ViewUtil;
-open CommonView;
 open Virtual_dom.Vdom;
 open Virtual_dom.Vdom.Node;
 

@@ -60,29 +60,38 @@ let exp_atom_view =
     | _ => text(word)
     };
   div(
-    [
-      random_offset(word),
-      //Attr.id(atom_focus_class(path) == "focussed" ? "-1" : ""),
-      Attr.classes(
+    [],
+    (
+      atom_focus_class(path) == "focussed"
+        ? [div([Attr.id("guy")], [word_view])] : []
+    )
+    @ [
+      div(
         [
-          "atom",
-          "expression-atom",
-          exp_atom_class(form),
-          atom_focus_class(path),
-        ]
-        @ binding_highlight_class
-        @ (is_drop_target ? ["active-drop-target"] : []),
+          random_offset(word),
+          //Attr.id(atom_focus_class(path) == "focussed" ? "-1" : ""),
+          Attr.classes(
+            [
+              "atom",
+              "expression-atom",
+              exp_atom_class(form),
+              atom_focus_class(path),
+            ]
+            @ binding_highlight_class
+            @ (is_drop_target ? ["active-drop-target"] : []),
+          ),
+          Attr.on_click(set_focus(this_path, inj)),
+          Attr.create("draggable", "true"),
+          Attr.on("dragstart", _ => stop(inj(Pickup(WordExp(ann_word))))),
+          Attr.on("dragenter", _ =>
+            stop(prevent(inj(SetDropTarget(this_target))))
+          ),
+          Attr.on("dragend", _ => inj(SetDropTarget(NoTarget))),
+          Attr.on("drop", _ => stop(inj(DropOnWord(this_path)))),
+        ],
+        [word_view],
       ),
-      Attr.on_click(set_focus(this_path, inj)),
-      Attr.create("draggable", "true"),
-      Attr.on("dragstart", _ => stop(inj(Pickup(WordExp(ann_word))))),
-      Attr.on("dragenter", _ =>
-        stop(prevent(inj(SetDropTarget(this_target))))
-      ),
-      Attr.on("dragend", _ => inj(SetDropTarget(NoTarget))),
-      Attr.on("drop", _ => stop(inj(DropOnWord(this_path)))),
     ],
-    [word_view],
   );
 };
 

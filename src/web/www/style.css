@@ -244,12 +244,7 @@ body {
   color: #e7e2fd;
   outline: solid 1px #a9a1cd;
 }
-.expression-atom.exp-atom-unbound.focussed,
-.expression-atom.exp-atom-formless.focussed {
-  background-color: rgb(68 62 84);
-  color: #e4ff03;
-  outline: solid 1px rgb(68 62 84);
-}
+
 
 .expression-atom.exp-atom-unbound::after, .expression-atom.exp-atom-formless::after {
   content: "?";
@@ -272,7 +267,12 @@ body {
     /*transform: scale(135%);*/
 }
 
-.atom.on-path, .atom.focussed {
+#guy {
+  position:absolute;
+  color: #0000;
+}
+
+.atom.on-path,  #guy {
   outline: solid 2px #e4ff00;
   background-color: #e4ff00;
   /*color: #9799f6 !important;*/
@@ -289,6 +289,13 @@ body {
   color: #00fbf1;
   text-shadow: 1px 2px #1ecdbb;
   transform: scale(1.13);
+}
+
+.expression-atom.exp-atom-unbound.focussed,
+.expression-atom.exp-atom-formless.focussed {
+  background-color: rgb(68 62 84);
+  color: #e4ff03;
+  outline: solid 1px rgb(68 62 84);
 }
 
 .word-separator{

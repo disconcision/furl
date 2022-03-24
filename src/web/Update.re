@@ -406,9 +406,13 @@ and apply_single:
       }
     | MoveDown => update_focus(Path.down_path, model) //|> app(SetAnimTargets(["-1"]))
     | MoveUp => update_focus(Path.up_path, model) //|> app(SetAnimTargets(["-1"]))
-    | MoveRight => update_focus(Path.next_word_path, model)
+    | MoveRight =>
+      Animate.set_init_coords(["guy"], state);
+      update_focus(Path.next_word_path, model);
     //|> app(SetAnimTargets(["-1"]))
-    | MoveLeft => update_focus(Path.prev_word_path, model)
+    | MoveLeft =>
+      Animate.set_init_coords(["guy"], state);
+      update_focus(Path.prev_word_path, model);
     //|> app(SetAnimTargets(["-1"]))
     | InsertChar(op) when Expression.is_operator(op) =>
       let is_a_next_word = (block, path: Path.t) =>
