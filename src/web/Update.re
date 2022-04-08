@@ -11,7 +11,7 @@ type single_focus_action =
   | MoveRight
   | MoveLeft
   | InsertChar(string)
-  | UpdateWord(Word.t => Word.t)
+  | UpdateWordF(Name.t => Name.t)
   | DeleteF
   | InsertNewWordF
   | InsertNewCellF
@@ -30,7 +30,7 @@ type t =
   | UpdateKeymap(Model.keymap => Model.keymap)
   | DebugPrint
   // words
-  | UpdateWord(Path.t, Word.t => Word.t)
+  | UpdateWord(Path.t, Name.t => Name.t)
   | InsertWord(Path.t, Model.word_sep_id, Word.t)
   | InsertNewWord(Path.t, Model.word_sep_id)
   // cells
@@ -119,7 +119,7 @@ let rec apply: (Model.t, t, 'b, ~schedule_action: 'a) => Model.t =
         | TrashedWord(word, _) =>
           model
           |> update_trash(ListUtil.remove(idx))
-          |> app(Pickup(WordBrush(word)))
+          |> app(Pickup(WordBrush(word.name)))
         | TrashedCell(cell, _) =>
           model
           |> update_trash(ListUtil.remove(idx))
@@ -140,7 +140,7 @@ let rec apply: (Model.t, t, 'b, ~schedule_action: 'a) => Model.t =
           let word =
             switch (Path.get_word(path, model.world)) {
             | Some(word) => word
-            | None => "lol. lmao."
+            | None => Word.mk_name("lol. lmao.")
             };
           model
           |> update_trash(trash => [TrashedWord(word, coords), ...trash])
@@ -196,11 +196,10 @@ let rec apply: (Model.t, t, 'b, ~schedule_action: 'a) => Model.t =
             switch (Path.cell_idx(path)) {
             | Some(i) when sep_idx == i =>
               let incr_path = Path.update_cell_idx((+)(1), path);
-              let (new_name, cell) =
-                Cell.init_w(Expression.string_of_lit(lit));
+              let (word, cell) = Cell.init_w(Expression.string_of_lit(lit));
               model
               |> app(InsertCell(sep_idx, cell))
-              |> app(UpdateWord(incr_path, _ => new_name));
+              |> app(UpdateWord(incr_path, _ => word.name));
             | _ => model
             }
           // 3. cells get copied if shift is pressed
@@ -243,7 +242,7 @@ let rec apply: (Model.t, t, 'b, ~schedule_action: 'a) => Model.t =
           m,
         );
       | InsertNewWord(path, sep_idx) =>
-        app(InsertWord(path, sep_idx, Core.Word.empty), model)
+        app(InsertWord(path, sep_idx, Core.Word.mk_empty()), model)
       | DropOnWordSep(path, sep_idx) =>
         (
           switch (model.carry) {
@@ -275,7 +274,8 @@ let rec apply: (Model.t, t, 'b, ~schedule_action: 'a) => Model.t =
               |> app(Delete(word_path))
               |> app(InsertWord(path, sep_idx, word));
             }
-          | WordBrush(word) => app(InsertWord(path, sep_idx, word), model)
+          | WordBrush(name) =>
+            app(InsertWord(path, sep_idx, Word.mk_name(name)), model)
           | _ => model
           }
         )
@@ -321,10 +321,10 @@ let rec apply: (Model.t, t, 'b, ~schedule_action: 'a) => Model.t =
                 |> app(Delete(path))
                 |> app(InsertWord(path, path_word_idx, word));
               }
-            | WordBrush(word) =>
+            | WordBrush(name) =>
               model
               |> app(Delete(path))
-              |> app(InsertWord(path, path_word_idx, word))
+              |> app(InsertWord(path, path_word_idx, Word.mk_name(name)))
             | _ => model
             }
           )
@@ -364,7 +364,7 @@ and apply_single:
       app(SetFocus(SingleCell(f(m.world, current_path))), m);
     };
     switch (a) {
-    | UpdateWord(f) => app(UpdateWord(current_path, f), model)
+    | UpdateWordF(f) => app(UpdateWord(current_path, f), model)
     | DeleteF =>
       // TODO: set focus
       switch (model.focus) {
@@ -382,7 +382,10 @@ and apply_single:
       switch (current_path) {
       | [_, _, Word(Index(n, _)), ..._]
           when
-            Path.get_word(current_path, model.world) != Some(Core.Word.empty) =>
+            switch (Path.get_word(current_path, model.world)) {
+            | Some(word) when !Word.is_empty(word) => true
+            | _ => false
+            } =>
         app(InsertNewWord(current_path, n + 1), model)
       | _ => model
       };
@@ -416,20 +419,20 @@ and apply_single:
         | Some(_) => true
         | _ => false
         };
-      let is_next_word_op = Path.is_next_word_p(Expression.is_operator);
+      let is_next_word_op = Path.is_next_word_p(Expression.word_is_operator);
       switch (current_path, Path.get_word(current_path, model.world)) {
-      | (_, Some(op1)) when Expression.is_operator(op1) => model
-      | (_, Some(op1)) when op1 == Word.empty =>
+      | (_, Some(op1)) when Expression.word_is_operator(op1) => model
+      | (_, Some(op1)) when Word.is_empty(op1) =>
         app(UpdateWord(current_path, _ => op), model)
       | ([_, _, Word(Index(n, _)), ..._], _)
           when
             is_a_next_word(model.world, current_path)
             && !is_next_word_op(model.world, current_path) =>
-        app(InsertWord(current_path, n + 1, op), model)
+        app(InsertWord(current_path, n + 1, Word.mk_name(op)), model)
 
       | ([_, _, Word(Index(n, _)), ..._], _) =>
         model
-        |> app(InsertWord(current_path, n + 1, op))
+        |> app(InsertWord(current_path, n + 1, Word.mk_name(op)))
         |> app(InsertNewWord(current_path, n + 2))
       | _ => model
       };
@@ -438,13 +441,13 @@ and apply_single:
       switch (Path.get_word(current_path, model.world), current_path) {
       | (Some(word), [_, _, Word(Index(n, _)), ..._])
           // if we're on an operator, advance to next word
-          when Expression.is_operator(word) =>
-        app(InsertWord(current_path, n + 1, x), model)
+          when Expression.word_is_operator(word) =>
+        app(InsertWord(current_path, n + 1, Word.mk_name(x)), model)
       | _ =>
-        app(UniFocus(UpdateWord(w => w == Word.empty ? x : w ++ x)), model)
+        app(UniFocus(UpdateWordF(n => Name.empty == n ? x : n ++ x)), model)
       };
     | Backspace =>
-      let is_prev_word_op = Path.is_prev_word_p(Expression.is_operator);
+      let is_prev_word_op = Path.is_prev_word_p(Expression.word_is_operator);
       let remove_char = str => String.sub(str, 0, String.length(str) - 1);
       let words = Path.get_words(current_path, model.world);
       switch (current_path) {
@@ -469,7 +472,7 @@ and apply_single:
         };
       | _ =>
         switch (words) {
-        | Some([x]) when x == Word.empty =>
+        | Some([x]) when Word.is_empty(x) =>
           // if only empty word, delete cell
           Animate.cells(state);
           switch (current_path) {
@@ -492,11 +495,11 @@ and apply_single:
              backspace an empty word after an operator, we'll delete
              the operator. */
           switch (Path.get_word(current_path, model.world)) {
-          | Some(word) when Expression.is_operator(word) =>
-            app(UpdateWord(current_path, _ => Word.empty), model)
+          | Some(word) when Expression.word_is_operator(word) =>
+            app(UpdateWord(current_path, _ => Name.empty), model)
           | Some(word)
               when
-                word == Word.empty
+                Word.is_empty(word)
                 && is_prev_word_op(model.world, current_path) =>
             model
             |> app(UniFocus(DeleteF))
@@ -509,15 +512,15 @@ and apply_single:
                    ),
                  ),
                )
-          | Some(word) when word == Word.empty =>
+          | Some(word) when Word.is_empty(word) =>
             model
             |> app(UniFocus(DeleteF))
             |> app(SetFocus(SingleCell(Path.decr_word(current_path))))
           | _ =>
             app(
               UniFocus(
-                UpdateWord(
-                  w => String.length(w) == 1 ? Word.empty : remove_char(w),
+                UpdateWordF(
+                  n => String.length(n) == 1 ? Name.empty : remove_char(n),
                 ),
               ),
               model,

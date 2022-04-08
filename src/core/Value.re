@@ -10,7 +10,7 @@ type t =
 
 let parse_atom: Word.t => atom =
   w =>
-    switch (Expression.parse_lit(w)) {
+    switch (Expression.parse_lit(w.name)) {
     | Some(n) => Lit(n)
     | None => Unknown(w)
     };

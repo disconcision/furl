@@ -86,13 +86,13 @@ let animate_coords = (state: State.t) => {
 let cells = (state: State.t) =>
   set_init_coords(Core.Cell.ids^ |> List.map(string_of_int), state);
 
-let cells_except = (id: Core.Cell.uid, state: State.t) =>
+let cells_except = (id: Core.UID.t, state: State.t) =>
   set_init_coords(
     Core.Cell.ids^ |> List.filter((!=)(id)) |> List.map(string_of_int),
     state,
   );
 
-let cells_and = (id: Core.Cell.uid, state: State.t) =>
+let cells_and = (id: Core.UID.t, state: State.t) =>
   set_init_coords(
     Core.Cell.ids^ |> List.cons(id) |> List.map(string_of_int),
     state,

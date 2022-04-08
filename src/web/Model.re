@@ -35,7 +35,7 @@ type carry =
   | NoCarry
   | WordExp(AnnotatedBlock.annotated_word_exp)
   | WordPat(AnnotatedBlock.annotated_word_pat)
-  | WordBrush(Word.t)
+  | WordBrush(Name.t)
   | Cell(AnnotatedBlock.annotated_cell)
   | CellBrush(Cell.t);
 

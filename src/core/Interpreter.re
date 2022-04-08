@@ -192,8 +192,8 @@ let run_block: Block.t => Block.t =
           };
         let value =
           switch (result) {
-          | None => ["?"]
-          | Some(lit) => [Expression.string_of_lit(lit)]
+          | None => [Word.mk_name("?")]
+          | Some(lit) => [Word.mk_name(Expression.string_of_lit(lit))]
           };
         let expression =
           List.map(

@@ -27,7 +27,7 @@ let brush_view = (~inj, ~model as _: Model.t, word): t => {
       Attr.classes(["atom", "toolbar-atom"]),
       Attr.create("draggable", "true"),
       Attr.on_mousedown(_ => Event.(Many([Stop_propagation]))),
-      Attr.on_click(_ => stop(inj(UniFocus(UpdateWord(_ => word))))),
+      Attr.on_click(_ => stop(inj(UniFocus(UpdateWordF(_ => word))))),
       Attr.on("dragstart", _ => stop(inj(Pickup(WordBrush(word))))),
       Attr.on("dragend", _ => inj(SetDropTarget(NoTarget))),
     ],
@@ -47,10 +47,10 @@ let brushes_panel = (~inj, ~model): t =>
 let trash_item_view = (~inj, trash_idx, item) => {
   let (item_view, x, y) =
     switch (item) {
-    | Model.TrashedWord(word, (x, y)) => (text(word), x, y)
+    | Model.TrashedWord(word, (x, y)) => (text(word.name), x, y)
     | Model.TrashedCell(cell, (x, y)) =>
       switch (cell.pattern) {
-      | [w, ..._] => (text(w ++ "..."), x, y)
+      | [w, ..._] => (text(w.name ++ "..."), x, y)
       | _ => (text("lol"), x, y)
       }
     };

@@ -75,10 +75,10 @@ and is_valid_path_word: (Word.s, t) => bool =
       false;
     }
 and is_valid_path_char: (Word.t, t) => bool =
-  (word, path) =>
+  ({name, _}, path) =>
     switch (path) {
     | [Char(Index(current, total))] =>
-      String.length(word) == total && current < total
+      String.length(name) == total && current < total
     | _ =>
       print_endline("path invalid: char");
       false;
@@ -271,7 +271,7 @@ let delete: (t, Block.t) => Block.t =
     };
   };
 
-let update_word: (Word.t => Word.t, t, Block.t) => Block.t =
+let update_word: (Name.t => Name.t, t, Block.t) => Block.t =
   (f, path, block) =>
     switch (path) {
     | [
@@ -320,12 +320,12 @@ let is_word_sep_touching_empty = (exp_path, sep_idx, block) => {
   let prev_path = exp_path @ [Word(Index(sep_idx - 1, 666))];
   let next_path = exp_path @ [Word(Index(sep_idx, 666))];
   (
-    try(is_word_p((==)(Word.empty), block, prev_path)) {
+    try(is_word_p(Word.is_empty, block, prev_path)) {
     | _ => false
     }
   )
   || (
-    try(is_word_p((==)(Word.empty), block, next_path)) {
+    try(is_word_p(Word.is_empty, block, next_path)) {
     | _ => false
     }
   );

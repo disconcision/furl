@@ -14,7 +14,7 @@ let val_atom_view =
     : t =>
   div(
     [
-      random_offset(word),
+      random_offset(word.name),
       Attr.classes(
         ["atom", "value-atom", atom_focus_class(path)]
         @ (
@@ -26,7 +26,7 @@ let val_atom_view =
       ),
       Attr.on_click(set_focus(this_path, inj)),
     ],
-    [text(word)],
+    [text(word.name)],
   );
 
 let view =

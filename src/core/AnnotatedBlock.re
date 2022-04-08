@@ -13,23 +13,23 @@ type dynamic_status =
 
 [@deriving sexp]
 type annotated_word_val = {
+  word: Word.t,
   path: Path.t,
   form: Value.atom,
-  word: Word.t,
 };
 
 [@deriving sexp]
 type annotated_word_pat = {
+  word: Word.t,
   path: Path.t,
   form: option(Pattern.atom),
-  word: Word.t,
 };
 
 [@deriving sexp]
 type annotated_word_exp = {
+  word: Word.t,
   path: Path.t,
   form: Expression.atom,
-  word: Word.t,
   dynamic_status,
 };
 
@@ -75,7 +75,7 @@ type annotated_cell = {
   pattern: annotated_pat,
   expression: annotated_exp,
   value: annotated_val,
-  uid: Cell.uid,
+  uid: UID.t,
 };
 
 [@deriving sexp]
@@ -146,7 +146,10 @@ let annotate_exp: (Path.ctx, Path.t, Word.s) => annotated_exp =
 
 let get_pat_vars: annotated_pat => Path.ctx =
   ({words, _}) =>
-    List.map(({path, word, _}: annotated_word_pat) => (word, path), words);
+    List.map(
+      ({path, word, _}: annotated_word_pat) => (word.name, path),
+      words,
+    );
 
 let get_bound_exp_vars: annotated_exp => Path.ctx =
   ({words, _}) =>
@@ -154,7 +157,7 @@ let get_bound_exp_vars: annotated_exp => Path.ctx =
     |> List.filter(({form, _}: annotated_word_exp) =>
          Expression.is_bound_var(form)
        )
-    |> List.map(({path, word, _}) => (word, path));
+    |> List.map(({path, word, _}) => (word.name, path));
 
 let annotate_cell: (Path.ctx, Path.t, int, int, Cell.t) => annotated_cell =
   (context, path, length, idx, {pattern, expression, value, uid}) => {
@@ -207,7 +210,7 @@ let gather_uses: (Pattern.uses_ctx, annotated_exp) => Pattern.uses_ctx =
       (acc_ctx, {path, word, _}: annotated_word_exp) =>
         Environment.update_or_extend(
           acc_ctx,
-          word,
+          word.name,
           uses => uses @ [path],
           [path],
         ),
@@ -224,8 +227,8 @@ let consume_uses:
           let form = Some(Pattern.parse_atom(acc_ctx, word));
           let new_words = acc_words @ [{...ann_pat, form}];
           let new_ctx =
-            switch (Environment.lookup(acc_ctx, word)) {
-            | Some(_) => Environment.update(acc_ctx, word, _ => [])
+            switch (Environment.lookup(acc_ctx, word.name)) {
+            | Some(_) => Environment.update(acc_ctx, word.name, _ => [])
             | None => acc_ctx
             };
           (new_words, new_ctx);
@@ -268,12 +271,12 @@ let count_uses: Pattern.uses_ctx => int =
     |> List.map(((_, x)) => List.length(x))
     |> List.fold_left((+), 0);
 
-let init_live_ctx: list(annotated_cell) => list(Word.t) =
+let init_live_ctx: list(annotated_cell) => list(Name.t) =
   reversed_block =>
     switch (reversed_block) {
     | [last_cell, ..._] =>
       List.map(
-        ({word, _}: annotated_word_pat) => word,
+        ({word, _}: annotated_word_pat) => word.name,
         last_cell.pattern.words,
       )
     | _ => []
@@ -289,7 +292,7 @@ let cell_binding_status = (bound_here, live_ctx) =>
   some_bound_here_in_live_ctx(bound_here, live_ctx) ? Alive : Dead;
 
 let reverse_annonate_cell:
-  (list(Word.t), Pattern.uses_ctx, annotated_cell) =>
+  (list(Name.t), Pattern.uses_ctx, annotated_cell) =>
   (Pattern.uses_ctx, annotated_cell) =
   (live_ctx, co_ctx, {pattern, expression, vars, _} as ann_cell) => {
     let (co_ctx, pattern) = consume_uses(co_ctx, pattern);

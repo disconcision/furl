@@ -57,11 +57,11 @@ let exp_atom_view =
   let word_view =
     switch (form) {
     | Var(_) => core_word_view(model.pattern_display, word)
-    | _ => text(word)
+    | _ => text(word.name)
     };
   div(
     [
-      random_offset(word),
+      random_offset(word.name),
       //Attr.id(atom_focus_class(path) == "focussed" ? "-1" : ""),
       Attr.classes(
         [

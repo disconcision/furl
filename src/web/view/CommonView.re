@@ -24,8 +24,8 @@ let focus_word = (path: option(Path.t), i: int): option(Path.t) =>
 let core_word_view: (Model.pattern_display, Word.t) => t =
   (pattern_display, word) =>
     switch (pattern_display) {
-    | Emoji => text(Word.emoji_of_default(word))
-    | Name => text(word)
+    | Emoji => text(Name.emoji_of_default(word.name))
+    | Name => text(word.name)
     };
 
 let word_sep_view =

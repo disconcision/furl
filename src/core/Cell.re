@@ -1,9 +1,6 @@
 open Sexplib.Std;
 
 [@deriving sexp]
-type uid = int;
-
-[@deriving sexp]
 type pattern = Word.s;
 [@deriving sexp]
 type expression = Word.s;
@@ -18,7 +15,7 @@ type field =
 
 [@deriving sexp]
 type t = {
-  uid,
+  uid: UID.t,
   pattern,
   expression,
   value,
@@ -30,23 +27,24 @@ type s = list(t);
 [@deriving sexp]
 type word_idx = int;
 
+let ids: ref(list(UID.t)) = ref([]);
+
 let nth_word: (Word.s, word_idx) => Word.t = List.nth;
 
-let update_word: (string => string, int, Word.s) => Word.s =
-  (f, idx) => List.mapi((i, x) => i == idx ? f(x) : x);
+let update_word: (Name.t => Name.t, int, Word.s) => Word.s =
+  (f, idx) =>
+    List.mapi((i, {name, _} as w: Word.t) =>
+      {...w, name: i == idx ? f(name) : name}
+    );
 
-let cell_uid_gen: ref(uid) = ref(0);
-let ids: ref(list(uid)) = ref([]);
-
-let mk_uid = (): int => {
-  let uid = cell_uid_gen^;
-  cell_uid_gen := cell_uid_gen^ + 1;
+let mk_uid = () => {
+  let uid = UID.mk();
   ids := [uid, ...ids^];
   uid;
 };
 
 //TODO: betterize this (cyclical dep withe Expr issue)
-let init_w: Word.t => (Word.t, t) =
+let init_w': Word.t => (Word.t, t) =
   w_exp => {
     let w = Word.mk();
     (
@@ -55,17 +53,31 @@ let init_w: Word.t => (Word.t, t) =
     );
   };
 
-let init_name: Word.t => t =
+let init_w: Name.t => (Word.t, t) = w_exp => init_w'(Word.mk_name(w_exp));
+
+let init_name': Word.t => t =
   w => {
-    {pattern: [w], expression: [Word.empty], value: ["?"], uid: mk_uid()};
+    {
+      pattern: [w],
+      expression: [Word.mk_empty()],
+      value: [Word.mk_name("?")],
+      uid: mk_uid(),
+    };
   };
 
-let init_full: ((Word.s, Word.s)) => t =
+let init_name: Name.t => t = n => init_name'(Word.mk_name(n));
+
+let init_full: ((Name.s, Name.s)) => t =
   ((pat, exp)) => {
     let _ = Word.mk();
-    {pattern: pat, expression: exp, value: ["?"], uid: mk_uid()};
+    {
+      pattern: List.map(Word.mk_name, pat),
+      expression: List.map(Word.mk_name, exp),
+      value: [Word.mk_name("?")],
+      uid: mk_uid(),
+    };
   };
 
-let init: 'a => t = () => init_name(Word.mk());
+let init: 'a => t = () => init_name'(Word.mk());
 
 let copy: t => t = cell => {...cell, uid: mk_uid()};

@@ -100,12 +100,14 @@ let parse_operator: string => option(operator) =
 
 let is_operator: string => bool = s => parse_operator(s) != None;
 
-let parse_lit: Word.t => option(lit) =
-  word =>
+let word_is_operator: Word.t => bool = w => is_operator(w.name);
+
+let parse_lit: Name.t => option(lit) =
+  name =>
     switch (
-      bool_of_string_opt(word),
-      int_of_string_opt(word),
-      float_of_string_opt(word),
+      bool_of_string_opt(name),
+      int_of_string_opt(name),
+      float_of_string_opt(name),
     ) {
     | (Some(b), _, _) => Some(BoolLit(b))
     | (_, Some(n), _) => Some(IntLit(n))
@@ -120,17 +122,17 @@ type parse_tail_res =
 
 //TODO: combine with below
 let parse_atom: (Path.ctx, Word.t) => atom =
-  (context, word) =>
+  (context, {name, _}) =>
     switch (
-      parse_lit(word),
-      Word.is_valid_var(word),
-      Environment.lookup(context, word),
+      parse_lit(name),
+      Name.is_valid_var(name),
+      Environment.lookup(context, name),
     ) {
-    | _ when is_operator(word) => Operator(word)
+    | _ when is_operator(name) => Operator(name)
     | (Some(lit), _, _) => Lit(lit)
-    | (_, true, Some(path)) => Var(word, path)
-    | (_, true, None) => Unbound(word)
-    | _ => Formless(word)
+    | (_, true, Some(path)) => Var(name, path)
+    | (_, true, None) => Unbound(name)
+    | _ => Formless(name)
     };
 
 let is_bound_var: atom => bool =
@@ -142,12 +144,12 @@ let is_bound_var: atom => bool =
 
 let rec parse: (Path.ctx, Word.s) => t =
   (ctx, words) => {
-    let parse_word = word => Atom(parse_atom(ctx, word));
+    let parse_word = (word: Word.t) => Atom(parse_atom(ctx, word));
     switch (words) {
     | [] => Unknown(words)
     | [x] => parse_word(x)
     | [x, ...xs] =>
-      switch (prim_of_string(x)) {
+      switch (prim_of_string(x.name)) {
       | Some(fn) => App(fn, List.map(parse_word, xs))
       | _ =>
         switch (parse_tail_seq(xs, parse_word, ctx)) {
@@ -162,10 +164,11 @@ and parse_tail_seq = (xs, parse_word, ctx): parse_tail_res =>
   switch (xs) {
   | [] => Any
   | [op, x1, ...xs] =>
-    switch (parse_operator(op), parse_tail_seq(xs, parse_word, ctx)) {
+    switch (parse_operator(op.name), parse_tail_seq(xs, parse_word, ctx)) {
     | (Some(Minus), Success(Add, ps)) =>
-      Success(Add, [parse_word("-" ++ x1), ...ps])
-    | (Some(Minus), Any) => Success(Add, [parse_word("-" ++ x1)])
+      Success(Add, [parse_word(Word.mapn(x1 => "-" ++ x1, x1)), ...ps])
+    | (Some(Minus), Any) =>
+      Success(Add, [parse_word(Word.mapn(x1 => "-" ++ x1, x1))])
     | (Some(op), Success(prim, ps)) when prim_of(op) == Some(prim) =>
       Success(prim, [parse_word(x1), ...ps])
     | (Some(op), Any) when prim_of(op) != None =>

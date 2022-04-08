@@ -37,7 +37,7 @@ let pat_word_view =
     (~pattern_display, {word, form, _}: AnnotatedBlock.annotated_word_pat) =>
   switch (form) {
   | Some(Var(_)) => core_word_view(pattern_display, word)
-  | _ => text(word)
+  | _ => text(word.name)
   };
 
 let pat_atom_view =
@@ -50,7 +50,7 @@ let pat_atom_view =
     : t => {
   div(
     [
-      random_offset(word),
+      random_offset(word.name),
       Attr.classes(
         ["atom", "pattern-atom", atom_focus_class(path)]
         @ pat_atom_classes(form)
