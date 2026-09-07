@@ -41,7 +41,7 @@ jobs:
           sudo apt-get install -y opam bubblewrap libgmp-dev pkg-config
           opam init --bare --disable-sandboxing -y
           opam repository add archive git+https://github.com/ocaml/opam-repository-archive --all-switches
-          opam switch create classic ocaml-base-compiler.4.08.1 -y
+          opam switch create classic ocaml-base-compiler.4.08.1 --repositories=default,archive -y
       - name: Build classic Furl
         working-directory: source
         env:
