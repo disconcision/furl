@@ -35,13 +35,18 @@ jobs:
           path: automation
           sparse-checkout: .github/pages
           persist-credentials: false
+      - name: Cache classic OCaml packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.opam
+          key: ${{ runner.os }}-classic-ocaml-4.08.1-${{ hashFiles('source/opam.export') }}
       - name: Install the classic OCaml toolchain
         run: |
           sudo apt-get update
           sudo apt-get install -y opam bubblewrap libgmp-dev pkg-config
           opam init --bare --disable-sandboxing -y
           opam repository add archive git+https://github.com/ocaml/opam-repository-archive --all-switches
-          opam switch create classic ocaml-base-compiler.4.08.1 --repositories=default,archive -y
+          opam switch set classic || opam switch create classic ocaml-base-compiler.4.08.1 --repositories=default,archive -y
       - name: Build classic Furl
         working-directory: source
         env:
